@@ -1,677 +1,722 @@
-import React from "react";
-import {
-  ArrowRight,
-  Check,
-  ChevronDown,
-  Globe,
-  Image as ImageIcon,
-  LayoutTemplate,
-  MapPin,
-  MenuSquare,
-  MonitorSmartphone,
-  Paintbrush2,
-  Rocket,
-  Sparkles,
-  Store,
-} from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 
-const features = [
-  {
-    icon: LayoutTemplate,
-    title: "Restaurant-ready templates",
-    description:
-      "Start with layouts built for cafes, bakeries, food trucks, and full-service dining rooms.",
-  },
-  {
-    icon: Paintbrush2,
-    title: "Simple visual editor",
-    description:
-      "Update your brand colors, fonts, photos, and layout without touching code.",
-  },
-  {
-    icon: MenuSquare,
-    title: "Menu management",
-    description:
-      "Add seasonal menus, featured dishes, prices, and specials in a few clicks.",
-  },
-  {
-    icon: ImageIcon,
-    title: "Photo galleries",
-    description:
-      "Show off signature plates, interiors, and events with polished image sections.",
-  },
-  {
-    icon: MapPin,
-    title: "Hours and location blocks",
-    description:
-      "Keep hours, address, contact links, and reservation details easy to find.",
-  },
-  {
-    icon: Rocket,
-    title: "One-click publishing",
-    description:
-      "Launch instantly with hosting, deployment, and updates handled in one place.",
-  },
-  {
-    icon: Globe,
-    title: "Custom domains included",
-    description:
-      "Connect your own domain and look established from day one.",
-  },
-  {
-    icon: MonitorSmartphone,
-    title: "SEO and mobile optimized",
-    description:
-      "Help guests find you on Google and get a smooth experience on any device.",
-  },
-];
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8787";
 
-const templates = [
-  {
-    name: "Fine Dining",
-    accent: "from-stone-900 via-amber-950 to-stone-800",
-    tone: "Elegant, cinematic, reservation-first",
-    copy: "Perfect for chef-led concepts, tasting menus, and upscale hospitality brands.",
-  },
-  {
-    name: "Neighborhood Cafe",
-    accent: "from-amber-100 via-orange-50 to-rose-100",
-    tone: "Warm, welcoming, community-driven",
-    copy: "Ideal for coffee shops, brunch spots, and all-day casual spaces.",
-  },
-  {
-    name: "Food Truck",
-    accent: "from-red-500 via-orange-500 to-yellow-400",
-    tone: "Bold, fast, mobile-first",
-    copy: "Built for menus that change often, pop-up schedules, and social traffic.",
-  },
-  {
-    name: "Bakery",
-    accent: "from-rose-100 via-orange-50 to-yellow-100",
-    tone: "Soft, artisanal, product-focused",
-    copy: "Great for pastry shops, custom cake businesses, and seasonal pre-orders.",
-  },
-  {
-    name: "Modern Casual",
-    accent: "from-teal-900 via-emerald-800 to-stone-900",
-    tone: "Clean, stylish, conversion-focused",
-    copy: "A sharp fit for growing brands that want a polished online presence quickly.",
-  },
-];
+const baseRestaurant = () => ({
+  name: "",
+  cuisine: "",
+  phone: "",
+  contactEmail: "",
+  address: "",
+  city: "",
+  state: "",
+  zip: "",
+  hours: { Monday: "", Tuesday: "", Wednesday: "", Thursday: "", Friday: "", Saturday: "", Sunday: "" },
+  reservationUrl: "",
+  orderUrl: "",
+  deliveryUrl: "",
+  story: "",
+  heroTitle: "",
+  heroSubtitle: "",
+  templateKey: "modern",
+  layoutDensity: "balanced",
+  primaryColor: "#ea580c",
+  accentColor: "#0f766e",
+  seoTitle: "",
+  seoDescription: "",
+  customDomain: "",
+  announcementEnabled: false,
+  announcementText: "",
+  instagramUrl: "",
+  facebookUrl: "",
+  tiktokUrl: "",
+  showPhone: true,
+  showEmail: true,
+  showStory: true,
+  isOffline: false,
+  borderRadiusStyle: "rounded",
+  navStyle: "split",
+  fontStyle: "sans",
+  themeMode: "light",
+  heroStyle: "overlay",
+  menuCategories: [{ id: crypto.randomUUID(), name: "Featured", items: [] }],
+  gallery: [],
+  sectionOrder: ["story", "location", "menu", "gallery"],
+  extraLocations: []
+});
 
-const testimonials = [
-  {
-    quote:
-      "We replaced an outdated site in one afternoon. Our new menu is easier to update, and guests finally stop calling to ask for our hours.",
-    name: "Marisol Vega",
-    role: "Owner, Sol y Mesa",
-  },
-  {
-    quote:
-      "The templates actually look like they were made for restaurants. We launched before a busy holiday weekend without hiring a designer or developer.",
-    name: "Daniel Cho",
-    role: "Co-owner, Juniper Bakery",
-  },
-  {
-    quote:
-      "Our food truck schedule changes constantly, and this makes updates simple. It looks professional and takes almost no time to manage.",
-    name: "Tasha Reed",
-    role: "Founder, Ember Street Kitchen",
-  },
-];
+const normalizeRestaurant = (r) => ({ 
+  ...baseRestaurant(), 
+  ...r, 
+  gallery: r?.gallery || [], 
+  menuCategories: r?.menuCategories || [],
+  hours: (typeof r?.hours === 'object' && r.hours !== null) ? r.hours : baseRestaurant().hours,
+  sectionOrder: Array.isArray(r?.sectionOrder) && r.sectionOrder.length > 0 ? r.sectionOrder : ["story", "location", "menu", "gallery"],
+  extraLocations: Array.isArray(r?.extraLocations) ? r.extraLocations : []
+});
 
-const pricing = [
-  {
-    name: "Starter",
-    price: "$29",
-    description: "For new restaurants that need a polished online presence fast.",
-    features: [
-      "1 website",
-      "Restaurant template library",
-      "Drag-and-drop editor",
-      "Menu, hours, and location sections",
-      "Hosting included",
-    ],
-    cta: "Start Free Trial",
-    featured: false,
-  },
-  {
-    name: "Growth",
-    price: "$79",
-    description: "For busy restaurants that want more flexibility and stronger branding.",
-    features: [
-      "Everything in Starter",
-      "Custom domain connection",
-      "Advanced gallery sections",
-      "SEO tools and analytics",
-      "Priority support",
-    ],
-    cta: "Book a Demo",
-    featured: true,
-  },
-  {
-    name: "Premium",
-    price: "$149",
-    description: "For multi-location brands and hospitality groups ready to scale.",
-    features: [
-      "Everything in Growth",
-      "Up to 5 locations",
-      "Multi-site management",
-      "Brand presets",
-      "Launch support",
-    ],
-    cta: "Talk to Sales",
-    featured: false,
-  },
-];
+const request = async (path, { method = "GET", token, body } = {}) => {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  if (res.status === 204) return null;
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Request failed");
+  return data;
+};
 
-const faqs = [
-  {
-    question: "Do I need any technical experience?",
-    answer:
-      "No. The platform is designed for restaurant owners and managers, not developers. You can pick a template, update your content, and publish with guided tools.",
-  },
-  {
-    question: "Can I use my own domain name?",
-    answer:
-      "Yes. You can connect an existing domain or set one up during launch, depending on your plan.",
-  },
-  {
-    question: "Can I update my menu whenever I want?",
-    answer:
-      "Yes. You can change dishes, prices, specials, and seasonal menus anytime without rebuilding the site.",
-  },
-  {
-    question: "Is hosting included?",
-    answer:
-      "Yes. Hosting, deployment, and site delivery are included so you do not have to manage separate providers.",
-  },
-];
+const Field = ({ label, value, onChange, type = "text" }) => (
+  <label className="block text-sm font-medium text-slate-700">
+    {label}
+    <input type={type} value={value || ""} onChange={(e) => onChange(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2 text-sm transition-all focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 placeholder:text-slate-400" />
+  </label>
+);
 
-function SectionTitle({ eyebrow, title, description }) {
+const Area = ({ label, value, onChange, rows = 2 }) => (
+  <label className="block text-sm font-medium text-slate-700">
+    {label}
+    <textarea rows={rows} value={value || ""} onChange={(e) => onChange(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2 text-sm transition-all focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 placeholder:text-slate-400" />
+  </label>
+);
+
+function Landing({ onGetStarted }) {
   return (
-    <div className="mx-auto max-w-3xl text-center">
-      <p className="mb-4 inline-flex items-center rounded-full border border-orange-200 bg-white/80 px-4 py-1 text-sm font-medium text-orange-700 shadow-sm">
-        {eyebrow}
-      </p>
-      <h2 className="font-serif text-3xl text-stone-900 sm:text-4xl">{title}</h2>
-      <p className="mt-4 text-lg leading-8 text-stone-600">{description}</p>
+    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <div className="text-center pt-10 pb-16">
+        <span className="inline-block rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-600 mb-6 border border-orange-200 shadow-sm">Over 40+ Generative Themes Now Available</span>
+        <h1 className="text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl md:text-7xl">
+          Launch Your Restaurant's <br className="hidden sm:block" /><span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-orange-600">Digital Home</span>
+        </h1>
+        <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-500">
+          Stop struggling with clunky website builders. Plateform generates stunning, mobile-first websites optimized for restaurants instantly with a Live WYSIWYG Template Editor.
+        </p>
+        <div className="mt-10 flex justify-center gap-4">
+          <button onClick={onGetStarted} className="rounded-full bg-slate-900 px-8 py-4 text-sm font-bold text-white shadow-xl transition-all hover:scale-105 hover:bg-slate-800">
+            Start Building Free
+          </button>
+        </div>
+      </div>
+      
+      <div className="mt-10 mb-20 grid gap-8 md:grid-cols-3 items-center">
+        <div className="rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-300/50 border border-white/50 transform hover:-translate-y-2 transition-transform duration-300">
+          <img src="/mockup_bakery.png" alt="French Bakery Modern Theme" className="w-full h-auto object-cover" />
+        </div>
+        <div className="rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-300/50 border border-white/50 transform md:-translate-y-8 hover:-translate-y-10 transition-transform duration-300">
+          <img src="/mockup_sushi.png" alt="Neon Sushi Dark Theme" className="w-full h-auto object-cover" />
+        </div>
+        <div className="rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-300/50 border border-white/50 transform hover:-translate-y-2 transition-transform duration-300">
+          <img src="/mockup_steakhouse.png" alt="Steakhouse Classic Theme" className="w-full h-auto object-cover" />
+        </div>
+      </div>
+
+      <div className="grid gap-8 md:grid-cols-3">
+        <div className="rounded-[2rem] bg-white/60 p-8 border border-white/80 shadow-md backdrop-blur-md">
+          <div className="h-12 w-12 rounded-xl bg-orange-100 flex items-center justify-center mb-6 text-orange-600 text-xl font-bold shadow-sm">1</div>
+          <h3 className="text-xl font-bold text-slate-900 mb-2">Live Theme Editor</h3>
+          <p className="text-slate-500 leading-relaxed">Watch your site compile instantly as you tweak fonts, shadow styles, and layouts in our split-screen simulator.</p>
+        </div>
+        <div className="rounded-[2rem] bg-white/60 p-8 border border-white/80 shadow-md backdrop-blur-md">
+          <div className="h-12 w-12 rounded-xl bg-orange-100 flex items-center justify-center mb-6 text-orange-600 text-xl font-bold shadow-sm">2</div>
+          <h3 className="text-xl font-bold text-slate-900 mb-2">Immersive Galleries</h3>
+          <p className="text-slate-500 leading-relaxed">Instantly generate masonry photo girds and immersive lightbox modals to show off your atmosphere.</p>
+        </div>
+        <div className="rounded-[2rem] bg-white/60 p-8 border border-white/80 shadow-md backdrop-blur-md">
+          <div className="h-12 w-12 rounded-xl bg-orange-100 flex items-center justify-center mb-6 text-orange-600 text-xl font-bold shadow-sm">3</div>
+          <h3 className="text-xl font-bold text-slate-900 mb-2">Always Protected</h3>
+          <p className="text-slate-500 leading-relaxed">Toggle your site offline instantly, hide your phone number, or update business hours from anywhere.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Auth({ onAuth }) {
+  const [isReg, setIsReg] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [error, setError] = useState("");
+  async function submit(e) {
+    e.preventDefault();
+    setError("");
+    try {
+      const data = await request(isReg ? "/api/auth/register" : "/api/auth/login", { method: "POST", body: form });
+      onAuth(data);
+    } catch (err) { setError(err.message); }
+  }
+  return (
+    <div className="mx-auto mt-20 max-w-4xl overflow-hidden rounded-[2.5rem] bg-white shadow-2xl flex flex-col md:flex-row shadow-slate-200/50">
+      <div className="md:w-1/2 p-10 lg:p-14 bg-gradient-to-br from-slate-50 to-white">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">Plateform</h1>
+        <p className="text-slate-500 mb-8">{isReg ? "Create your account to start building." : "Welcome back to your dashboard."}</p>
+        <form className="space-y-4" onSubmit={submit}>
+          {isReg && <Field label="Full Name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />}
+          <Field label="Email Address" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
+          <Field label="Password" type="password" value={form.password} onChange={(v) => setForm({ ...form, password: v })} />
+          {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}
+          <button className="mt-2 w-full rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:scale-[1.02] hover:shadow-orange-500/30">
+            {isReg ? "Create Account" : "Sign In to Dashboard"}
+          </button>
+        </form>
+        <div className="mt-6 text-center">
+          <button className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors" type="button" onClick={() => setIsReg(!isReg)}>
+            {isReg ? "Already have an account? Sign in" : "New to Plateform? Create an account"}
+          </button>
+        </div>
+      </div>
+      <div className="md:w-1/2 p-10 bg-slate-900 text-white flex flex-col justify-center relative overflow-hidden">
+        <div className="relative z-10">
+          <h2 className="text-3xl font-bold mb-4">Restaurants run on Plateform.</h2>
+          <p className="text-slate-400">Join thousands of owners managing their premium digital presence in minutes, without a single line of code.</p>
+        </div>
+        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-orange-500/20 rounded-full blur-3xl"></div>
+        <div className="absolute -top-12 -left-12 w-48 h-48 bg-teal-500/20 rounded-full blur-3xl"></div>
+      </div>
+    </div>
+  );
+}
+
+function Onboarding({ token, onCreated }) {
+  const [form, setForm] = useState(baseRestaurant());
+  const [error, setError] = useState("");
+  async function submit(e) {
+    e.preventDefault();
+    setError("");
+    try {
+      const data = await request("/api/restaurants", { method: "POST", token, body: form });
+      onCreated(normalizeRestaurant(data.restaurant));
+    } catch (err) { setError(err.message); }
+  }
+  return (
+    <div className="mx-auto max-w-3xl pt-12">
+      <div className="mb-8 text-center">
+        <h1 className="text-4xl font-bold tracking-tight text-slate-900">Let's set up your restaurant</h1>
+        <p className="mt-2 text-lg text-slate-500">Provide a few basic details to generate your website.</p>
+      </div>
+      <form onSubmit={submit} className="grid gap-5 rounded-[2.5rem] border border-white/50 bg-white/70 p-8 shadow-xl shadow-slate-200/40 backdrop-blur-md sm:grid-cols-2 sm:p-10">
+        <Field label="Restaurant Name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
+        <Field label="Primary Cuisine" value={form.cuisine} onChange={(v) => setForm({ ...form, cuisine: v })} />
+        <Field label="Phone Number" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
+        <Field label="Contact Email" value={form.contactEmail} onChange={(v) => setForm({ ...form, contactEmail: v })} />
+        <div className="sm:col-span-2">
+          <button className="mt-4 w-full rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-3.5 text-base font-semibold text-white shadow-lg shadow-orange-500/20 transition-all hover:scale-[1.01] hover:shadow-orange-500/30">
+            Generate My Website
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+const PRESETS = [
+  { name: "Steakhouse", templateKey: "classic", primaryColor: "#991b1b", accentColor: "#1e293b", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "serif", themeMode: "dim", heroStyle: "overlay" },
+  { name: "Neon Sushi", templateKey: "bold", primaryColor: "#ec4899", accentColor: "#8b5cf6", borderRadiusStyle: "pill", navStyle: "split", fontStyle: "sans", themeMode: "dark", heroStyle: "overlay" },
+  { name: "Rustic Cafe", templateKey: "modern", primaryColor: "#d97706", accentColor: "#4d7c0f", borderRadiusStyle: "rounded", navStyle: "center", fontStyle: "sans", themeMode: "light", heroStyle: "split" },
+  { name: "Ocean Seafood", templateKey: "modern", primaryColor: "#0284c7", accentColor: "#0f766e", borderRadiusStyle: "pill", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "overlay" },
+  { name: "Midnight Lounge", templateKey: "classic", primaryColor: "#c084fc", accentColor: "#fbbf24", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "serif", themeMode: "dark", heroStyle: "overlay" },
+  { name: "French Bakery", templateKey: "classic", primaryColor: "#f43f5e", accentColor: "#e11d48", borderRadiusStyle: "rounded", navStyle: "center", fontStyle: "playful", themeMode: "light", heroStyle: "split" },
+  { name: "Cyberpunk Diner", templateKey: "bold", primaryColor: "#10b981", accentColor: "#f43f5e", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "mono", themeMode: "dark", heroStyle: "overlay" },
+  { name: "Classic Italian", templateKey: "classic", primaryColor: "#b91c1c", accentColor: "#15803d", borderRadiusStyle: "rounded", navStyle: "center", fontStyle: "serif", themeMode: "dim", heroStyle: "split" },
+  { name: "Modern Vegan", templateKey: "modern", primaryColor: "#84cc16", accentColor: "#14b8a6", borderRadiusStyle: "pill", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "overlay" },
+  { name: "BBQ Smokehouse", templateKey: "bold", primaryColor: "#ea580c", accentColor: "#dc2626", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "mono", themeMode: "dim", heroStyle: "overlay" },
+  { name: "Minimalist Coffee", templateKey: "modern", primaryColor: "#525252", accentColor: "#171717", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "split" },
+  { name: "Taco Stand", templateKey: "bold", primaryColor: "#f59e0b", accentColor: "#ef4444", borderRadiusStyle: "rounded", navStyle: "center", fontStyle: "playful", themeMode: "light", heroStyle: "overlay" },
+  { name: "Fine Dining", templateKey: "classic", primaryColor: "#9ca3af", accentColor: "#d1d5db", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "serif", themeMode: "dark", heroStyle: "overlay" },
+  { name: "Retro Diner", templateKey: "bold", primaryColor: "#06b6d4", accentColor: "#f43f5e", borderRadiusStyle: "pill", navStyle: "split", fontStyle: "playful", themeMode: "light", heroStyle: "split" },
+  { name: "Tech Food Truck", templateKey: "modern", primaryColor: "#3b82f6", accentColor: "#8b5cf6", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "mono", themeMode: "light", heroStyle: "overlay" },
+  { name: "Dim Sum Palace", templateKey: "classic", primaryColor: "#dc2626", accentColor: "#fbbf24", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "serif", themeMode: "dim", heroStyle: "split" },
+  { name: "Boba Shop", templateKey: "modern", primaryColor: "#fbcfe8", accentColor: "#f472b6", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "playful", themeMode: "light", heroStyle: "overlay" },
+  { name: "Gastro Pub", templateKey: "classic", primaryColor: "#b45309", accentColor: "#78350f", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "sans", themeMode: "dim", heroStyle: "split" },
+  { name: "Noodle Bar", templateKey: "bold", primaryColor: "#ef4444", accentColor: "#f59e0b", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "mono", themeMode: "dark", heroStyle: "overlay" },
+  { name: "Breakfast Club", templateKey: "modern", primaryColor: "#fde047", accentColor: "#fdba74", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "playful", themeMode: "light", heroStyle: "split" },
+  
+  // 20 NEW PRESETS
+  { name: "Mediterranean", templateKey: "classic", primaryColor: "#0284c7", accentColor: "#eab308", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "serif", themeMode: "light", heroStyle: "overlay" },
+  { name: "Matcha Cafe", templateKey: "modern", primaryColor: "#84cc16", accentColor: "#65a30d", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "split" },
+  { name: "London Pub", templateKey: "classic", primaryColor: "#7f1d1d", accentColor: "#d97706", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "serif", themeMode: "dim", heroStyle: "overlay" },
+  { name: "Neon Arcade", templateKey: "bold", primaryColor: "#f0abfc", accentColor: "#2dd4bf", borderRadiusStyle: "pill", navStyle: "split", fontStyle: "mono", themeMode: "dark", heroStyle: "overlay" },
+  { name: "Brutalist Block", templateKey: "modern", primaryColor: "#000000", accentColor: "#525252", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "mono", themeMode: "light", heroStyle: "split" },
+  { name: "Tropical Resort", templateKey: "modern", primaryColor: "#06b6d4", accentColor: "#d946ef", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "playful", themeMode: "light", heroStyle: "overlay" },
+  { name: "Parisian Cafe", templateKey: "classic", primaryColor: "#db2777", accentColor: "#9333ea", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "serif", themeMode: "light", heroStyle: "overlay" },
+  { name: "Vintage 1950s", templateKey: "classic", primaryColor: "#be123c", accentColor: "#1d4ed8", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "playful", themeMode: "light", heroStyle: "split" },
+  { name: "Nordic Kitchen", templateKey: "modern", primaryColor: "#9ca3af", accentColor: "#6b7280", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "split" },
+  { name: "Spicy Hotpot", templateKey: "bold", primaryColor: "#ef4444", accentColor: "#b91c1c", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "sans", themeMode: "dark", heroStyle: "overlay" },
+  { name: "Miami Vaporwave", templateKey: "bold", primaryColor: "#22d3ee", accentColor: "#db2777", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "mono", themeMode: "dim", heroStyle: "split" },
+  { name: "Sushi Omakase", templateKey: "classic", primaryColor: "#171717", accentColor: "#b91c1c", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "serif", themeMode: "dim", heroStyle: "overlay" },
+  { name: "Urban Pizzeria", templateKey: "modern", primaryColor: "#eab308", accentColor: "#ea580c", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "split" },
+  { name: "Bavarian Beer", templateKey: "classic", primaryColor: "#0369a1", accentColor: "#fcd34d", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "serif", themeMode: "dim", heroStyle: "overlay" },
+  { name: "Poke Bowl", templateKey: "modern", primaryColor: "#f472b6", accentColor: "#34d399", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "sans", themeMode: "light", heroStyle: "split" },
+  { name: "Desert Oasis", templateKey: "classic", primaryColor: "#ca8a04", accentColor: "#c2410c", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "sans", themeMode: "light", heroStyle: "overlay" },
+  { name: "Gothic Tavern", templateKey: "classic", primaryColor: "#4f46e5", accentColor: "#be185d", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "serif", themeMode: "dark", heroStyle: "overlay" },
+  { name: "Pastel Gelato", templateKey: "bold", primaryColor: "#fbcfe8", accentColor: "#bbf7d0", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "playful", themeMode: "light", heroStyle: "split" },
+  { name: "Soul Food Yard", templateKey: "modern", primaryColor: "#b45309", accentColor: "#84cc16", borderRadiusStyle: "rounded", navStyle: "center", fontStyle: "sans", themeMode: "light", heroStyle: "overlay" },
+  { name: "Dark Kitchen", templateKey: "bold", primaryColor: "#fbbf24", accentColor: "#10b981", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "mono", themeMode: "dark", heroStyle: "split" }
+];
+
+function LayoutEditor({ order, onChange }) {
+  const moveUp = (idx) => {
+    if (idx === 0) return;
+    const next = [...order];
+    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+    onChange(next);
+  };
+  const moveDown = (idx) => {
+    if (idx === order.length - 1) return;
+    const next = [...order];
+    [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
+    onChange(next);
+  };
+  const names = { story: "Our Story", location: "Location & Hours", menu: "Menu Builder", gallery: "Photo Gallery" };
+  return (
+    <div className="space-y-2">
+      {order.map((key, i) => (
+        <div key={key} className="flex justify-between items-center bg-white border border-slate-200 p-3 rounded-xl shadow-sm hover:border-slate-300 transition">
+          <span className="font-semibold text-sm text-slate-700">{i+1}. {names[key]}</span>
+          <div className="flex gap-1">
+            <button type="button" onClick={() => moveUp(i)} disabled={i === 0} className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg disabled:opacity-30 transition">↑</button>
+            <button type="button" onClick={() => moveDown(i)} disabled={i === order.length - 1} className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg disabled:opacity-30 transition">↓</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DeploymentsList({ deployments }) {
+  if (!deployments || deployments.length === 0) return <p className="text-sm text-slate-400 italic">No deployments published yet.</p>;
+  return (
+    <div className="space-y-4">
+      {deployments.slice(0, 5).map(d => (
+        <div key={d.id} className="flex gap-4 p-4 bg-slate-50 border border-emerald-500/30 rounded-xl">
+          <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(d.previewUrl)}`} alt="QR Code" className="w-16 h-16 rounded-md shadow-sm border border-slate-200 bg-white p-1" />
+          <div className="flex-1 overflow-hidden">
+            <div className="text-emerald-700 font-bold mb-1 text-xs uppercase tracking-wide flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div> Live Version</div>
+            <a href={d.previewUrl} target="_blank" rel="noreferrer" className="text-emerald-700 text-sm font-mono truncate block hover:underline">{d.previewUrl}</a>
+            <div className="text-slate-500 text-[10px] mt-1 font-medium">Published on {new Date(d.createdAt).toLocaleString()}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LocationsBuilder({ value, onChange }) {
+  const add = () => onChange([...value, { id: crypto.randomUUID(), name: "", address: "", city: "", state: "", mapUrl: "", hours: {} }]);
+  const remove = (idx) => onChange(value.filter((_, i) => i !== idx));
+  const update = (idx, field, val) => { const next = [...value]; next[idx][field] = val; onChange(next); };
+  return (
+    <div className="space-y-4 mt-6">
+      {value.length > 0 && <label className="block text-sm font-medium text-slate-700">Additional Branches</label>}
+      {value.map((loc, idx) => (
+        <div key={loc.id || idx} className="rounded-xl border border-slate-200 bg-slate-100/50 p-4 relative">
+          <button type="button" onClick={() => remove(idx)} className="absolute top-3 right-3 text-red-500 text-sm font-bold">&times; Remove</button>
+          <div className="grid gap-3 max-w-[90%]">
+            <Field label="Branch Name (e.g. Downtown)" value={loc.name} onChange={(v) => update(idx, 'name', v)} />
+            <Field label="Street Address" value={loc.address} onChange={(v) => update(idx, 'address', v)} />
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="City" value={loc.city} onChange={(v) => update(idx, 'city', v)} />
+              <Field label="State / ZIP" value={loc.state} onChange={(v) => update(idx, 'state', v)} />
+            </div>
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={add} className="w-full rounded-xl border border-dashed border-slate-300 py-2.5 text-xs font-bold text-slate-600 hover:border-slate-500 hover:bg-slate-50 transition">+ Add Restaurant Location</button>
+    </div>
+  );
+}
+
+function HoursBuilder({ value, onChange }) {
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const update = (day, val) => onChange({ ...value, [day]: val });
+  return (
+    <div className="space-y-3 bg-white/30 p-4 rounded-xl border border-slate-200/50">
+      <label className="block text-sm font-medium text-slate-700 mb-1">Business Hours</label>
+      {days.map((day) => (
+        <div key={day} className="flex items-center gap-3">
+          <span className="w-24 text-xs text-slate-600 font-medium uppercase tracking-wider">{day}</span>
+          <input type="text" placeholder="e.g. 9:00 AM - 5:00 PM or Closed" value={value?.[day] || ""} onChange={(e) => update(day, e.target.value)} className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/10" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function GalleryManager({ value, onChange }) {
+  const [input, setInput] = useState("");
+  const add = () => { if (input) { onChange([...value, input]); setInput(""); } };
+  const remove = (idx) => onChange(value.filter((_, i) => i !== idx));
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Paste image URL here..." className="flex-1 rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-orange-500 focus:outline-none" />
+        <button onClick={add} type="button" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-800 shadow-sm">Add Photo</button>
+      </div>
+      {value.length === 0 && <p className="text-sm text-slate-400 italic">No photos added yet. Paste a URL to begin building your gallery.</p>}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {value.map((url, idx) => (
+          <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-100">
+            <img src={url} alt="" className="w-full h-full object-cover" />
+            <button type="button" onClick={() => remove(idx)} className="absolute top-2 right-2 bg-red-500 text-white w-6 h-6 rounded-full opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center font-bold pb-0.5">&times;</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MenuBuilder({ value, onChange }) {
+  const addCategory = () => onChange([...value, { id: crypto.randomUUID(), name: "New Category", items: [] }]);
+  const removeCategory = (idx) => onChange(value.filter((_, i) => i !== idx));
+  const updateCategory = (idx, name) => { const next = [...value]; next[idx].name = name; onChange(next); };
+  const addItem = (catIdx) => { const next = [...value]; next[catIdx].items.push({ id: crypto.randomUUID(), name: "New Item", description: "", price: "$0.00" }); onChange(next); };
+  const removeItem = (catIdx, itemIdx) => { const next = [...value]; next[catIdx].items.splice(itemIdx, 1); onChange(next); };
+  const updateItem = (catIdx, itemIdx, field, val) => { const next = [...value]; next[catIdx].items[itemIdx][field] = val; onChange(next); };
+
+  return (
+    <div className="space-y-6">
+      {value.length === 0 && <p className="text-sm text-slate-400 italic">No menu categories yet.</p>}
+      {value.map((cat, cIdx) => (
+        <div key={cat.id} className="rounded-xl border border-slate-200 bg-white/50 p-5 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <input value={cat.name} onChange={(e) => updateCategory(cIdx, e.target.value)} className="font-bold text-lg text-slate-900 bg-transparent border-b-2 border-transparent focus:border-orange-500 focus:outline-none px-1" />
+            <button type="button" onClick={() => removeCategory(cIdx)} className="text-red-500 text-sm font-medium hover:underline ml-auto">Delete Category</button>
+          </div>
+          <div className="space-y-3">
+            {cat.items.map((item, iIdx) => (
+              <div key={item.id} className="grid grid-cols-12 gap-3 bg-white p-3 rounded-lg shadow-sm border border-slate-100 items-start">
+                <div className="col-span-12 sm:col-span-5"><input placeholder="Item Name" value={item.name} onChange={(e) => updateItem(cIdx, iIdx, 'name', e.target.value)} className="w-full text-sm font-semibold p-1 focus:outline-none focus:border-b focus:border-orange-500" /></div>
+                <div className="col-span-12 sm:col-span-3"><input placeholder="Price" value={item.price} onChange={(e) => updateItem(cIdx, iIdx, 'price', e.target.value)} className="w-full text-sm text-orange-600 font-bold p-1 focus:outline-none focus:border-b focus:border-orange-500" /></div>
+                <div className="col-span-12 sm:col-span-11"><input placeholder="Item description or ingredients..." value={item.description} onChange={(e) => updateItem(cIdx, iIdx, 'description', e.target.value)} className="w-full text-xs text-slate-500 p-1 focus:outline-none focus:border-b focus:border-orange-500" /></div>
+                <div className="col-span-12 sm:col-span-1 flex items-center justify-end"><button type="button" onClick={() => removeItem(cIdx, iIdx)} className="text-slate-400 hover:text-red-500 text-xl font-bold px-2">&times;</button></div>
+              </div>
+            ))}
+            <button type="button" onClick={() => addItem(cIdx)} className="text-sm rounded-lg bg-orange-50 px-3 py-1.5 text-orange-600 font-semibold hover:bg-orange-100 transition inline-block mt-2">+ Add Item</button>
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={addCategory} className="w-full rounded-xl border-2 border-dashed border-slate-300 py-3.5 text-sm font-semibold text-slate-600 hover:border-orange-500 hover:text-orange-600 hover:bg-orange-50 transition">+ Add Menu Category</button>
+    </div>
+  );
+}
+
+function ThemeGallery({ current, onSelect }) {
+  return (
+    <div className="mb-6">
+      <label className="block text-sm font-medium text-slate-700 mb-2">Visual Theme Gallery</label>
+      <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x scrollbar-thin scrollbar-thumb-slate-300">
+        {PRESETS.map((p) => {
+          const isSelected = current.primaryColor === p.primaryColor && current.themeMode === p.themeMode && current.fontStyle === p.fontStyle;
+          const bg = p.themeMode === "dark" ? "#0f172a" : p.themeMode === "dim" ? "#27272a" : "#ffffff";
+          const surface = p.themeMode === "dark" ? "#1e293b" : p.themeMode === "dim" ? "#3f3f46" : "#f9fafb";
+          const text = p.themeMode === "dark" || p.themeMode === "dim" ? "#ffffff" : "#111827";
+          return (
+            <button 
+              type="button" 
+              key={p.name} 
+              onClick={() => onSelect(p)} 
+              className={`snap-start shrink-0 w-36 rounded-2xl border-2 transition-all overflow-hidden text-left shadow-sm ${isSelected ? "border-orange-500 shadow-md transform scale-[1.02]" : "border-slate-200 hover:border-slate-400"}`}
+            >
+              <div 
+                className="h-20 w-full p-3 flex flex-col justify-between" 
+                style={{ backgroundColor: bg, fontFamily: p.fontStyle === 'serif' ? 'serif' : p.fontStyle === 'mono' ? 'monospace' : p.fontStyle === 'playful' ? 'Comic Sans MS, cursive' : 'sans-serif' }}
+              >
+                <div style={{ color: text, fontSize: '10px', fontWeight: 'bold' }}>{p.name.slice(0, 10)}</div>
+                <div className="flex gap-1 mt-auto items-end">
+                  <div className="h-4 w-12 rounded-sm" style={{ backgroundColor: p.primaryColor }}></div>
+                  <div className="h-4 w-6 rounded-sm" style={{ backgroundColor: p.accentColor }}></div>
+                </div>
+              </div>
+              <div className="bg-white px-3 py-2 text-[10px] font-semibold text-slate-600 uppercase tracking-wider flex justify-between">
+                <span>{p.themeMode}</span>
+                <span>{p.fontStyle}</span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Dashboard({ token, user, restaurant, onUpdate, onLogout }) {
+  const [draft, setDraft] = useState(normalizeRestaurant(restaurant));
+  const [status, setStatus] = useState("");
+  const [deployments, setDeployments] = useState([]);
+  const [pub, setPub] = useState(null);
+  const [previewHtml, setPreviewHtml] = useState(null);
+  const [showPreview, setShowPreview] = useState(true);
+  const debounceRef = useRef(null);
+
+  const applyPreset = (p) => setDraft({ ...draft, templateKey: p.templateKey, primaryColor: p.primaryColor, accentColor: p.accentColor, borderRadiusStyle: p.borderRadiusStyle, navStyle: p.navStyle, fontStyle: p.fontStyle, themeMode: p.themeMode, heroStyle: p.heroStyle });
+
+  useEffect(() => { request(`/api/restaurants/${restaurant.id}/deployments`, { token }).then((d) => setDeployments(d.deployments)).catch(() => setDeployments([])); }, [restaurant.id, token]);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      request("/api/preview", { method: "POST", token, body: draft })
+        .then((res) => setPreviewHtml(res.html))
+        .catch(console.error);
+    }, 400); 
+    return () => clearTimeout(debounceRef.current);
+  }, [draft, token]);
+
+  const save = async () => {
+    setStatus("Saving...");
+    const data = await request(`/api/restaurants/${restaurant.id}`, { method: "PUT", token, body: draft });
+    onUpdate(normalizeRestaurant(data.restaurant));
+    setStatus("Saved");
+    setTimeout(() => setStatus(""), 1200);
+  };
+  const publish = async () => {
+    setStatus("Publishing...");
+    await save();
+    const out = await request(`/api/restaurants/${restaurant.id}/publish`, { method: "POST", token });
+    setPub(out.deployment);
+    const d = await request(`/api/restaurants/${restaurant.id}/deployments`, { token });
+    setDeployments(d.deployments);
+    setStatus("Published Successfully");
+    setTimeout(() => setStatus(""), 2000);
+  };
+
+  return (
+    <div className="flex h-screen bg-slate-50 overflow-hidden">
+      
+      {/* LEFT PANE: Editor Controls */}
+      <div className={`shrink-0 border-r border-slate-200 bg-white flex flex-col h-full z-10 shadow-xl transition-all duration-300 ${showPreview ? "w-full lg:w-[500px] xl:w-[600px]" : "w-full"}`}>
+        
+        <header className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+          <div>
+            <h1 className="font-bold text-slate-900 truncate w-48">{draft.name || "Draft"}</h1>
+            <div className="flex gap-3 text-xs font-medium text-slate-500">
+              <span>Live Editor</span>
+              <span className="text-slate-300">|</span>
+              <span className="text-emerald-600 font-bold tracking-wide">{restaurant.views || 0} Total Views</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowPreview(!showPreview)} className={`rounded-lg px-3 py-1.5 text-xs font-bold shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-slate-300 ${showPreview ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-slate-900 text-white hover:bg-slate-800'}`} title="Toggle Live Preview Pane">
+              {showPreview ? "Hide Preview \u2192" : "\u2190 Show Live Preview"}
+            </button>
+            <div className="h-4 w-px bg-slate-300 mx-1"></div>
+            <button onClick={save} className="rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200 transition-all hover:bg-slate-100 hover:ring-slate-300">Save</button>
+            <button onClick={publish} className="rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-bold text-white shadow-md transition-all hover:bg-orange-500">Publish</button>
+            <button className="text-slate-400 hover:text-slate-800 transition mx-2" onClick={onLogout} title="Sign Out">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fillRule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/><path fillRule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/></svg>
+            </button>
+          </div>
+        </header>
+        
+        {status && <div className="bg-orange-100 text-orange-700 text-xs font-bold text-center py-1 shrink-0 animate-pulse">{status}</div>}
+        <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-thin scrollbar-thumb-slate-200 bg-white flex flex-col items-center">
+          <div className={`space-y-12 w-full ${showPreview ? "" : "max-w-4xl"}`}>
+            
+            {/* Design Generation Settings */}
+            <section>
+              <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Generative Design Engine</h2>
+              <ThemeGallery current={draft} onSelect={applyPreset} />
+              
+              <div className="space-y-4 rounded-2xl bg-slate-50 p-5 border border-slate-100 mt-2">
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="block text-sm font-medium text-slate-700">Typography Font
+                    <select value={draft.fontStyle} onChange={(e) => setDraft({ ...draft, fontStyle: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
+                      <option value="sans">Modern Sans</option>
+                      <option value="serif">Elegant Serif</option>
+                      <option value="mono">Tech Monospace</option>
+                      <option value="playful">Playful Rounded</option>
+                    </select>
+                  </label>
+                  <label className="block text-sm font-medium text-slate-700">Theme Mode
+                    <select value={draft.themeMode} onChange={(e) => setDraft({ ...draft, themeMode: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
+                      <option value="light">Crisp Light Mode</option>
+                      <option value="dim">Moody Dim Mode</option>
+                      <option value="dark">Deep Dark Mode</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="block text-sm font-medium text-slate-700">Card & Button Shape
+                    <select value={draft.borderRadiusStyle} onChange={(e) => setDraft({ ...draft, borderRadiusStyle: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
+                      <option value="sharp">Sharp (0px)</option>
+                      <option value="rounded">Rounded</option>
+                      <option value="pill">Pill / Soft</option>
+                    </select>
+                  </label>
+                  <label className="block text-sm font-medium text-slate-700">Menu Navigation
+                    <select value={draft.navStyle} onChange={(e) => setDraft({ ...draft, navStyle: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
+                      <option value="split">Logo Left, Links Right</option>
+                      <option value="center">Fully Centered</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <label className="block text-sm font-medium text-slate-700">Hero Section Layout
+                    <select value={draft.heroStyle} onChange={(e) => setDraft({ ...draft, heroStyle: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
+                      <option value="overlay">Full Width Background Overlay</option>
+                      <option value="split">Split Screen / Side-by-Side</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="flex gap-4">
+                  <label className="flex-1 block text-sm font-medium text-slate-700">Primary Color
+                    <div className="mt-1 flex items-center overflow-hidden rounded-xl border border-slate-200 bg-white pl-2 focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20">
+                      <input type="color" value={draft.primaryColor} onChange={(e) => setDraft({ ...draft, primaryColor: e.target.value })} className="h-8 w-8 cursor-pointer rounded-full border-0 bg-transparent p-0" />
+                      <span className="px-3 text-xs text-slate-500 font-mono uppercase">{draft.primaryColor}</span>
+                    </div>
+                  </label>
+                  <label className="flex-1 block text-sm font-medium text-slate-700">Accent Color
+                    <div className="mt-1 flex items-center overflow-hidden rounded-xl border border-slate-200 bg-white pl-2 focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20">
+                      <input type="color" value={draft.accentColor} onChange={(e) => setDraft({ ...draft, accentColor: e.target.value })} className="h-8 w-8 cursor-pointer rounded-full border-0 bg-transparent p-0" />
+                      <span className="px-3 text-xs text-slate-500 font-mono uppercase">{draft.accentColor}</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </section>
+
+            {/* Layout Engine */}
+            <section>
+              <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Modular Layout Engine</h2>
+              <p className="text-xs text-slate-500 mb-3">Re-order how sections appear on your homepage.</p>
+              <LayoutEditor order={draft.sectionOrder} onChange={(v) => setDraft({ ...draft, sectionOrder: v })} />
+            </section>
+
+            {/* Core General Detail */}
+            <section>
+              <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Restaurant Identity</h2>
+              <div className="space-y-4">
+                <Field label="Restaurant Name" value={draft.name} onChange={(v) => setDraft({ ...draft, name: v })} />
+                <Field label="Cuisine Type" value={draft.cuisine} onChange={(v) => setDraft({ ...draft, cuisine: v })} />
+                
+                <div className="space-y-1 relative group mt-4">
+                  <Area label="Our Story (About Section)" value={draft.story} rows={3} onChange={(v) => setDraft({ ...draft, story: v })} />
+                  <label className="flex items-center gap-1.5 absolute top-0 right-0 text-[10px] uppercase font-bold text-slate-500">
+                    <input type="checkbox" checked={!!draft.showStory} onChange={(e) => setDraft({ ...draft, showStory: e.target.checked })} /> Show
+                  </label>
+                </div>
+                <Field label="Hero Title" value={draft.heroTitle} onChange={(v) => setDraft({ ...draft, heroTitle: v })} />
+                <Field label="Hero Subtitle" value={draft.heroSubtitle} onChange={(v) => setDraft({ ...draft, heroSubtitle: v })} />
+              </div>
+            </section>
+
+            {/* SEO Tuning */}
+            <section>
+              <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Search Engine Optimization (SEO)</h2>
+              <div className="space-y-4">
+                <Field label="Google Meta Title" value={draft.seoTitle} onChange={(v) => setDraft({ ...draft, seoTitle: v })} />
+                <Area label="Meta Description (Summary for Facebook/Google)" value={draft.seoDescription} rows={2} onChange={(v) => setDraft({ ...draft, seoDescription: v })} />
+              </div>
+            </section>
+
+            {/* Menu Builder  */}
+            <section>
+               <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Virtual Menu</h2>
+               <MenuBuilder value={draft.menuCategories} onChange={(v) => setDraft({ ...draft, menuCategories: v })} />
+            </section>
+
+            {/* Photo Gallery */}
+            <section>
+               <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Visual Gallery</h2>
+               <GalleryManager value={draft.gallery} onChange={(v) => setDraft({ ...draft, gallery: v })} />
+            </section>
+
+            {/* Timings */}
+            <section>
+               <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Timings & Location</h2>
+               <div className="grid gap-4 mb-4">
+                 <Field label="Street Address" value={draft.address} onChange={(v) => setDraft({ ...draft, address: v })} />
+                 <div className="grid grid-cols-2 gap-4">
+                    <Field label="City" value={draft.city} onChange={(v) => setDraft({ ...draft, city: v })} />
+                    <Field label="State / ZIP" value={draft.state} onChange={(v) => setDraft({ ...draft, state: v })} />
+                 </div>
+               </div>
+               <HoursBuilder value={draft.hours} onChange={(v) => setDraft({ ...draft, hours: v })} />
+               
+               <LocationsBuilder value={draft.extraLocations} onChange={(v) => setDraft({ ...draft, extraLocations: v })} />
+            </section>
+
+             {/* Deployments & Privacy */}
+             <section className="border-t border-slate-200 pt-8">
+               <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Published Sites</h2>
+               <DeploymentsList deployments={deployments} />
+
+               <div className="mt-8">
+                 <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Privacy Controls</h2>
+                 <label className="flex items-center gap-3 p-3 bg-red-50 rounded-xl border border-red-100">
+                  <input type="checkbox" checked={!!draft.isOffline} onChange={(e) => setDraft({ ...draft, isOffline: e.target.checked })} className="w-4 h-4 text-red-600 rounded" />
+                  <span className="text-sm font-semibold text-red-900">Take Website Offline Temporarily</span>
+                </label>
+               </div>
+            </section>
+
+           <div className="pb-20"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* RIGHT PANE: Live Target Device Simulator */}
+      {showPreview && (
+        <div className="flex-1 bg-slate-200 relative shadow-inner overflow-hidden flex flex-col transition-all duration-300">
+          <div className="bg-slate-800 text-slate-400 text-xs px-4 py-2 border-b border-slate-900 flex justify-between items-center shadow-md shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1.5"><div className="w-3 h-3 rounded-full bg-red-400"></div><div className="w-3 h-3 rounded-full bg-amber-400"></div><div className="w-3 h-3 rounded-full bg-emerald-400"></div></div>
+              <span className="ml-3 font-mono tracking-wide">{draft.customDomain || `${draft.name.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'preview'}.plateform.com`}</span>
+            </div>
+            <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded-md">Live Preview Active</span>
+          </div>
+          <div className="flex-1 w-full bg-slate-900/50 backdrop-blur flex justify-center items-center overflow-hidden h-full">
+            {previewHtml ? (
+                <iframe 
+                  srcDoc={previewHtml} 
+                  className="w-full h-full border-none shadow-2xl transition-all duration-500 ease-in-out bg-white" 
+                  title="Live Website Preview" 
+                />
+            ) : (
+              <div className="text-slate-400 animate-pulse font-mono text-sm">Compiling Generation Preview...</div>
+            )}
+          </div>
+        </div>
+      )}
+      
     </div>
   );
 }
 
 export default function App() {
+  const [token, setToken] = useState(() => localStorage.getItem("plateform_token") || "");
+  const [user, setUser] = useState(null);
+  const [restaurant, setRestaurant] = useState(null);
+  const [loading, setLoading] = useState(!!token);
+  const [error, setError] = useState("");
+  const [showAuth, setShowAuth] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    Promise.all([request("/api/me", { token }), request("/api/restaurants", { token })])
+      .then(([me, rs]) => { setUser(me.user); setRestaurant(normalizeRestaurant(rs.restaurants[0] || null)); setError(""); })
+      .catch((err) => { setError(err.message); localStorage.removeItem("plateform_token"); setToken(""); })
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  const onAuth = (data) => { localStorage.setItem("plateform_token", data.token); setLoading(true); setToken(data.token); setUser(data.user); setShowAuth(false); };
+  const onLogout = async () => { try { await request("/api/auth/logout", { method: "POST", token }); } catch { setError((prev) => prev); } setToken(""); setUser(null); setRestaurant(null); localStorage.removeItem("plateform_token"); setShowAuth(false); };
+
   return (
-    <div className="min-h-screen bg-[#f8f2ea] text-stone-900">
-      <div className="absolute inset-x-0 top-0 -z-10 h-[720px] bg-[radial-gradient(circle_at_top_left,_rgba(251,146,60,0.20),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(180,83,9,0.22),_transparent_30%),linear-gradient(180deg,#fffaf4_0%,#f8f2ea_45%,#f7efe5_100%)]" />
-
-      <header className="sticky top-0 z-50 border-b border-white/50 bg-[#fffaf4]/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-stone-900 text-white shadow-lg shadow-orange-200/40">
-              <Store className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="font-serif text-xl tracking-tight">Plateform</p>
-              <p className="text-xs uppercase tracking-[0.25em] text-stone-500">Websites for restaurants</p>
-            </div>
-          </div>
-
-          <nav className="hidden items-center gap-8 text-sm text-stone-600 md:flex">
-            <a href="#features" className="transition hover:text-stone-900">Features</a>
-            <a href="#templates" className="transition hover:text-stone-900">Templates</a>
-            <a href="#pricing" className="transition hover:text-stone-900">Pricing</a>
-            <a href="#faq" className="transition hover:text-stone-900">FAQ</a>
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <button className="hidden rounded-full px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-white sm:inline-flex">
-              Sign In
-            </button>
-            <button className="inline-flex items-center gap-2 rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-white shadow-lg shadow-orange-300/30 transition hover:-translate-y-0.5 hover:bg-stone-800">
-              Start Free Trial
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
+    <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-orange-200 font-sans">
+      {loading && (
+        <div className="flex h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-orange-500"></div>
         </div>
-      </header>
-
-      <main>
-        <section className="px-6 pb-20 pt-16 lg:px-8 lg:pt-24">
-          <div className="mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-[1.05fr_0.95fr]">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white/90 px-4 py-2 text-sm text-orange-800 shadow-sm">
-                <Sparkles className="h-4 w-4" />
-                Built for restaurant owners, not developers
-              </div>
-
-              <h1 className="mt-8 max-w-3xl font-serif text-5xl leading-tight tracking-tight text-stone-950 sm:text-6xl">
-                Launch a restaurant website that looks polished in minutes, not weeks.
-              </h1>
-
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-stone-600 sm:text-xl">
-                Choose a restaurant template, customize your menu, photos, hours, and branding,
-                then publish instantly with hosting and deployment handled for you.
-              </p>
-
-              <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-                <button className="inline-flex items-center justify-center gap-2 rounded-full bg-orange-600 px-7 py-4 text-base font-semibold text-white shadow-xl shadow-orange-300/40 transition hover:-translate-y-1 hover:bg-orange-500">
-                  Start Free Trial
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-                <button className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-7 py-4 text-base font-semibold text-stone-800 shadow-sm transition hover:-translate-y-1 hover:border-stone-400">
-                  Book a Demo
-                </button>
-              </div>
-
-              <div className="mt-10 flex flex-wrap items-center gap-6 text-sm text-stone-600">
-                <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  Hosting included
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  Mobile optimized
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  No code required
-                </div>
-              </div>
-            </div>
-
-            <div className="relative">
-              <div className="absolute -left-10 top-8 h-32 w-32 rounded-full bg-orange-300/30 blur-3xl" />
-              <div className="absolute -right-8 bottom-8 h-40 w-40 rounded-full bg-amber-500/20 blur-3xl" />
-
-              <div className="relative overflow-hidden rounded-[32px] border border-white/70 bg-white/80 p-5 shadow-[0_30px_90px_-20px_rgba(120,53,15,0.35)] backdrop-blur">
-                <div className="rounded-[26px] bg-stone-950 p-4 text-white">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                    <div>
-                      <p className="text-sm uppercase tracking-[0.28em] text-orange-200">Dashboard</p>
-                      <h3 className="mt-2 font-serif text-2xl">Luna Trattoria</h3>
-                    </div>
-                    <div className="rounded-full bg-emerald-500/20 px-3 py-1 text-sm text-emerald-300">
-                      Live
-                    </div>
-                  </div>
-
-                  <div className="mt-5 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-                    <div className="space-y-4">
-                      <div className="rounded-2xl bg-white/6 p-4">
-                        <p className="text-xs uppercase tracking-[0.24em] text-stone-400">Brand</p>
-                        <div className="mt-4 flex gap-3">
-                          <div className="h-10 w-10 rounded-full bg-orange-500" />
-                          <div className="h-10 w-10 rounded-full bg-amber-200" />
-                          <div className="h-10 w-10 rounded-full bg-stone-700" />
-                        </div>
-                        <p className="mt-4 text-sm text-stone-300">Warm palette applied to every page.</p>
-                      </div>
-
-                      <div className="rounded-2xl bg-white/6 p-4">
-                        <p className="text-xs uppercase tracking-[0.24em] text-stone-400">Menu Editor</p>
-                        <div className="mt-4 space-y-3">
-                          <div className="rounded-xl bg-white/8 p-3">
-                            <div className="flex items-center justify-between text-sm">
-                              <span>Burrata Toast</span>
-                              <span className="text-orange-300">$14</span>
-                            </div>
-                          </div>
-                          <div className="rounded-xl bg-white/8 p-3">
-                            <div className="flex items-center justify-between text-sm">
-                              <span>Rigatoni Alla Vodka</span>
-                              <span className="text-orange-300">$22</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-[24px] bg-[#f8f2ea] p-4 text-stone-900">
-                      <div className="overflow-hidden rounded-[22px] border border-stone-200 bg-white shadow-sm">
-                        <div className="h-44 bg-[linear-gradient(135deg,rgba(120,53,15,0.88),rgba(251,146,60,0.65)),url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80')] bg-cover bg-center" />
-                        <div className="p-5">
-                          <p className="text-xs uppercase tracking-[0.28em] text-orange-700">Preview</p>
-                          <h4 className="mt-2 font-serif text-3xl">Luna Trattoria</h4>
-                          <p className="mt-2 text-sm leading-6 text-stone-600">
-                            Handmade pasta, seasonal plates, and a dining room made for long evenings.
-                          </p>
-                          <div className="mt-4 grid grid-cols-2 gap-3">
-                            <div className="rounded-2xl bg-stone-50 p-3">
-                              <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Hours</p>
-                              <p className="mt-2 text-sm font-medium">Tue-Sun, 5pm-10pm</p>
-                            </div>
-                            <div className="rounded-2xl bg-stone-50 p-3">
-                              <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Reserve</p>
-                              <p className="mt-2 text-sm font-medium">OpenTable linked</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                  {[
-                    ["18 min", "Average launch time"],
-                    ["4.9/5", "Owner satisfaction"],
-                    ["24/7", "Hosting uptime monitoring"],
-                  ].map(([value, label]) => (
-                    <div key={label} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-                      <p className="text-2xl font-semibold text-stone-950">{value}</p>
-                      <p className="mt-1 text-sm text-stone-600">{label}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="features" className="px-6 py-20 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <SectionTitle
-              eyebrow="Everything you need to launch"
-              title="A website builder shaped around how restaurants actually operate"
-              description="From menu updates to domain setup, every part of the experience is designed to save time and make your business look its best."
-            />
-
-            <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-              {features.map((feature) => {
-                const Icon = feature.icon;
-                return (
-                  <article
-                    key={feature.title}
-                    className="group rounded-[28px] border border-white/80 bg-white/80 p-6 shadow-[0_20px_50px_-30px_rgba(28,25,23,0.35)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_30px_70px_-30px_rgba(154,52,18,0.45)]"
-                  >
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-700 transition group-hover:bg-orange-600 group-hover:text-white">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <h3 className="mt-5 text-xl font-semibold text-stone-900">{feature.title}</h3>
-                    <p className="mt-3 leading-7 text-stone-600">{feature.description}</p>
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section id="templates" className="px-6 py-20 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <SectionTitle
-              eyebrow="Template Showcase"
-              title="Start with a style that already fits your concept"
-              description="Choose a foundation that matches your atmosphere, then make it your own with photos, copy, menus, and brand details."
-            />
-
-            <div className="mt-14 grid gap-6 lg:grid-cols-5">
-              {templates.map((template) => (
-                <article
-                  key={template.name}
-                  className="overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_20px_50px_-35px_rgba(41,37,36,0.45)] transition hover:-translate-y-1"
-                >
-                  <div className={`h-48 bg-gradient-to-br ${template.accent} p-5 text-white`}>
-                    <div className="flex h-full flex-col justify-between rounded-[22px] border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-                      <p className="text-xs uppercase tracking-[0.28em] text-white/80">{template.tone}</p>
-                      <h3 className="font-serif text-3xl">{template.name}</h3>
-                    </div>
-                  </div>
-                  <div className="p-5">
-                    <p className="leading-7 text-stone-600">{template.copy}</p>
-                    <button className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-orange-700 transition hover:text-orange-800">
-                      Preview template
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="px-6 py-20 lg:px-8">
-          <div className="mx-auto max-w-7xl rounded-[36px] bg-stone-900 px-8 py-12 text-white shadow-[0_30px_80px_-30px_rgba(28,25,23,0.65)] lg:px-12 lg:py-16">
-            <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr]">
-              <div>
-                <p className="text-sm uppercase tracking-[0.28em] text-orange-300">How it works</p>
-                <h2 className="mt-4 font-serif text-4xl">Go from blank page to live website in three simple steps</h2>
-                <p className="mt-5 max-w-xl text-lg leading-8 text-stone-300">
-                  The process is designed to feel straightforward even if you have never built a site before.
-                </p>
-              </div>
-
-              <div className="grid gap-5 md:grid-cols-3">
-                {[
-                  {
-                    number: "01",
-                    title: "Choose a template",
-                    copy: "Pick a design built for your restaurant style, from bakery to fine dining.",
-                  },
-                  {
-                    number: "02",
-                    title: "Customize your content",
-                    copy: "Add your menu, photos, hours, story, and links with a guided editor.",
-                  },
-                  {
-                    number: "03",
-                    title: "Publish instantly",
-                    copy: "Launch with hosting, deployment, and performance handled automatically.",
-                  },
-                ].map((step) => (
-                  <div key={step.number} className="rounded-[28px] border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
-                    <p className="text-sm font-semibold tracking-[0.28em] text-orange-300">{step.number}</p>
-                    <h3 className="mt-4 text-2xl font-semibold">{step.title}</h3>
-                    <p className="mt-4 leading-7 text-stone-300">{step.copy}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="px-6 py-20 lg:px-8">
-          <div className="mx-auto grid max-w-7xl gap-14 lg:grid-cols-[0.95fr_1.05fr]">
-            <div>
-              <p className="text-sm uppercase tracking-[0.28em] text-orange-700">Why owners choose Plateform</p>
-              <h2 className="mt-4 font-serif text-4xl text-stone-950">
-                Spend less time managing your website and more time running your restaurant
-              </h2>
-              <p className="mt-5 text-lg leading-8 text-stone-600">
-                Your website should help guests trust your brand, view your menu, and find key information fast. It should not become another complicated tool to manage.
-              </p>
-            </div>
-
-            <div className="grid gap-5 sm:grid-cols-2">
-              {[
-                ["Save time", "Make updates in minutes instead of waiting on a freelancer or agency."],
-                ["Look more professional", "Use polished layouts that match the quality of your dining experience."],
-                ["Attract more customers", "Turn online visitors into reservations, walk-ins, and direct calls."],
-                ["No developer needed", "Your team can manage everything with a clear visual editor."],
-              ].map(([title, copy]) => (
-                <div key={title} className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-                    <Check className="h-5 w-5" />
-                  </div>
-                  <h3 className="mt-5 text-xl font-semibold text-stone-900">{title}</h3>
-                  <p className="mt-3 leading-7 text-stone-600">{copy}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="px-6 py-20 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <SectionTitle
-              eyebrow="Testimonials"
-              title="Trusted by owners who need a better website without extra complexity"
-              description="These examples reflect the kinds of teams this product is built to support: busy, quality-focused, and short on time."
-            />
-
-            <div className="mt-14 grid gap-6 lg:grid-cols-3">
-              {testimonials.map((item) => (
-                <figure key={item.name} className="rounded-[28px] border border-white/80 bg-white/90 p-7 shadow-sm">
-                  <blockquote className="text-lg leading-8 text-stone-700">“{item.quote}”</blockquote>
-                  <figcaption className="mt-6">
-                    <p className="font-semibold text-stone-900">{item.name}</p>
-                    <p className="text-sm text-stone-500">{item.role}</p>
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="pricing" className="px-6 py-20 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <SectionTitle
-              eyebrow="Pricing"
-              title="Flexible plans for single locations and growing hospitality brands"
-              description="Start simple, upgrade when you need more control, and keep hosting plus deployment under one roof."
-            />
-
-            <div className="mt-14 grid gap-6 lg:grid-cols-3">
-              {pricing.map((plan) => (
-                <article
-                  key={plan.name}
-                  className={`rounded-[30px] border p-8 shadow-sm ${
-                    plan.featured
-                      ? "border-orange-300 bg-stone-900 text-white shadow-[0_30px_80px_-30px_rgba(154,52,18,0.55)]"
-                      : "border-stone-200 bg-white text-stone-900"
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-2xl font-semibold">{plan.name}</h3>
-                      <p className={`mt-3 leading-7 ${plan.featured ? "text-stone-300" : "text-stone-600"}`}>
-                        {plan.description}
-                      </p>
-                    </div>
-                    {plan.featured && (
-                      <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white">
-                        Popular
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-8 flex items-end gap-2">
-                    <span className="font-serif text-5xl">{plan.price}</span>
-                    <span className={plan.featured ? "pb-2 text-stone-300" : "pb-2 text-stone-500"}>/month</span>
-                  </div>
-
-                  <ul className="mt-8 space-y-4">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-3">
-                        <Check className={`mt-0.5 h-5 w-5 ${plan.featured ? "text-orange-300" : "text-emerald-600"}`} />
-                        <span className={plan.featured ? "text-stone-200" : "text-stone-700"}>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <button
-                    className={`mt-10 inline-flex w-full items-center justify-center rounded-full px-5 py-4 text-sm font-semibold transition hover:-translate-y-0.5 ${
-                      plan.featured
-                        ? "bg-orange-500 text-white hover:bg-orange-400"
-                        : "bg-stone-900 text-white hover:bg-stone-800"
-                    }`}
-                  >
-                    {plan.cta}
-                  </button>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="faq" className="px-6 py-20 lg:px-8">
-          <div className="mx-auto max-w-4xl">
-            <SectionTitle
-              eyebrow="FAQ"
-              title="Clear answers for common questions before you launch"
-              description="Restaurant teams usually want simplicity, speed, and confidence. These are the questions we hear most often."
-            />
-
-            <div className="mt-12 space-y-4">
-              {faqs.map((item) => (
-                <details key={item.question} className="group rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left text-lg font-semibold text-stone-900">
-                    {item.question}
-                    <ChevronDown className="h-5 w-5 shrink-0 text-stone-500 transition group-open:rotate-180" />
-                  </summary>
-                  <p className="mt-4 leading-7 text-stone-600">{item.answer}</p>
-                </details>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="px-6 pb-24 pt-8 lg:px-8">
-          <div className="mx-auto max-w-7xl overflow-hidden rounded-[36px] bg-[linear-gradient(135deg,#7c2d12_0%,#c2410c_45%,#1c1917_100%)] px-8 py-12 text-white shadow-[0_30px_90px_-30px_rgba(124,45,18,0.65)] lg:px-12 lg:py-16">
-            <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
-              <div>
-                <p className="text-sm uppercase tracking-[0.28em] text-orange-200">Ready to launch</p>
-                <h2 className="mt-4 max-w-2xl font-serif text-4xl">
-                  Build a restaurant website that feels professional from day one
-                </h2>
-                <p className="mt-5 max-w-2xl text-lg leading-8 text-orange-50/90">
-                  Choose a template, customize your brand, and go live with hosting, deployment, and updates handled in one place.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-4 sm:flex-row lg:flex-col">
-                <button className="rounded-full bg-white px-7 py-4 text-sm font-semibold text-stone-900 transition hover:-translate-y-0.5 hover:bg-orange-50">
-                  Start Free Trial
-                </button>
-                <button className="rounded-full border border-white/30 bg-white/10 px-7 py-4 text-sm font-semibold text-white backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/15">
-                  Book a Demo
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <footer className="border-t border-stone-200 bg-[#fffaf4] px-6 py-10 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-stone-900 text-white">
-                <Store className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="font-serif text-xl tracking-tight">Plateform</p>
-                <p className="text-sm text-stone-500">Websites for restaurants that want to move fast.</p>
-              </div>
-            </div>
-            <p className="mt-5 max-w-md leading-7 text-stone-600">
-              Create a polished restaurant website, keep it updated without technical stress, and publish instantly with hosting included.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
-            {[
-              ["Product", ["Features", "Templates", "Pricing"]],
-              ["Company", ["About", "Customers", "Careers"]],
-              ["Support", ["Help Center", "Contact", "Status"]],
-              ["Social", ["Instagram", "LinkedIn", "X"]],
-            ].map(([title, links]) => (
-              <div key={title}>
-                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-stone-500">{title}</h3>
-                <ul className="mt-4 space-y-3">
-                  {links.map((link) => (
-                    <li key={link}>
-                      <a href="/" className="text-stone-700 transition hover:text-orange-700">
-                        {link}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+      )}
+      {!loading && !token && !showAuth && <Landing onGetStarted={() => setShowAuth(true)} />}
+      {!loading && !token && showAuth && <Auth onAuth={onAuth} />}
+      {!loading && token && user && !restaurant && <Onboarding token={token} onCreated={setRestaurant} />}
+      {!loading && token && user && restaurant && <Dashboard key={restaurant.id} token={token} user={user} restaurant={restaurant} onUpdate={setRestaurant} onLogout={onLogout} />}
+      {!loading && error && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full border border-red-200 bg-red-50/90 px-6 py-3 text-sm font-medium text-red-600 shadow-xl backdrop-blur-md z-50">
+          {error}
         </div>
-      </footer>
+      )}
     </div>
   );
 }

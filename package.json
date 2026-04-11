@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:server": "node server/index.js",
+    "dev:full": "powershell -NoProfile -Command \"Start-Job -ScriptBlock { npm run dev:server }; npm run dev; Get-Job | Stop-Job; Get-Job | Remove-Job\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
