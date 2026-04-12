@@ -1,9 +1,10 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback, memo } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8787";
 
 const baseRestaurant = () => ({
   name: "",
+  logoUrl: "",
   cuisine: "",
   phone: "",
   contactEmail: "",
@@ -25,8 +26,6 @@ const baseRestaurant = () => ({
   seoTitle: "",
   seoDescription: "",
   customDomain: "",
-  announcementEnabled: false,
-  announcementText: "",
   instagramUrl: "",
   facebookUrl: "",
   tiktokUrl: "",
@@ -39,21 +38,41 @@ const baseRestaurant = () => ({
   fontStyle: "sans",
   themeMode: "light",
   heroStyle: "overlay",
+  buttonStyle: "solid",
+  backgroundPattern: "solid",
+  cardShadow: "soft",
+  animationStyle: "smooth",
+  promoBanner: { text: "", link: "", enabled: false },
+  floatingCTA: { text: "", link: "", enabled: false },
+  menuFormat: "classic",
+  galleryFormat: "grid",
+  heroBackground: "static",
   menuCategories: [{ id: crypto.randomUUID(), name: "Featured", items: [] }],
   gallery: [],
-  sectionOrder: ["story", "location", "menu", "gallery"],
+  specials: [],
+  testimonials: [],
+  sectionOrder: ["story", "location", "specials", "menu", "testimonials", "gallery"],
   extraLocations: []
 });
 
-const normalizeRestaurant = (r) => ({ 
-  ...baseRestaurant(), 
-  ...r, 
-  gallery: r?.gallery || [], 
-  menuCategories: r?.menuCategories || [],
-  hours: (typeof r?.hours === 'object' && r.hours !== null) ? r.hours : baseRestaurant().hours,
-  sectionOrder: Array.isArray(r?.sectionOrder) && r.sectionOrder.length > 0 ? r.sectionOrder : ["story", "location", "menu", "gallery"],
-  extraLocations: Array.isArray(r?.extraLocations) ? r.extraLocations : []
-});
+const normalizeRestaurant = (r) => {
+  const baseOrder = ["story", "location", "specials", "menu", "testimonials", "gallery"];
+  let order = Array.isArray(r?.sectionOrder) && r.sectionOrder.length > 0 ? r.sectionOrder : baseOrder;
+  const missing = baseOrder.filter(sec => !order.includes(sec));
+  if (missing.length > 0) order = [...order, ...missing];
+  return { 
+    ...baseRestaurant(), 
+    ...r, 
+    logoUrl: r?.logoUrl || "",
+    gallery: r?.gallery || [], 
+    menuCategories: r?.menuCategories || [],
+    hours: (typeof r?.hours === 'object' && r.hours !== null) ? r.hours : baseRestaurant().hours,
+    sectionOrder: order,
+    extraLocations: Array.isArray(r?.extraLocations) ? r.extraLocations : [],
+    specials: r?.specials || [],
+    testimonials: r?.testimonials || []
+  };
+};
 
 const request = async (path, { method = "GET", token, body } = {}) => {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -67,19 +86,19 @@ const request = async (path, { method = "GET", token, body } = {}) => {
   return data;
 };
 
-const Field = ({ label, value, onChange, type = "text" }) => (
+const Field = memo(({ label, value, onChange, type = "text" }) => (
   <label className="block text-sm font-medium text-slate-700">
     {label}
     <input type={type} value={value || ""} onChange={(e) => onChange(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2 text-sm transition-all focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 placeholder:text-slate-400" />
   </label>
-);
+));
 
-const Area = ({ label, value, onChange, rows = 2 }) => (
+const Area = memo(({ label, value, onChange, rows = 2 }) => (
   <label className="block text-sm font-medium text-slate-700">
     {label}
     <textarea rows={rows} value={value || ""} onChange={(e) => onChange(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2 text-sm transition-all focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 placeholder:text-slate-400" />
   </label>
-);
+));
 
 function Landing({ onGetStarted }) {
   return (
@@ -215,45 +234,45 @@ const PRESETS = [
   { name: "Ocean Seafood", templateKey: "modern", primaryColor: "#0284c7", accentColor: "#0f766e", borderRadiusStyle: "pill", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "overlay" },
   { name: "Midnight Lounge", templateKey: "classic", primaryColor: "#c084fc", accentColor: "#fbbf24", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "serif", themeMode: "dark", heroStyle: "overlay" },
   { name: "French Bakery", templateKey: "classic", primaryColor: "#f43f5e", accentColor: "#e11d48", borderRadiusStyle: "rounded", navStyle: "center", fontStyle: "playful", themeMode: "light", heroStyle: "split" },
-  { name: "Cyberpunk Diner", templateKey: "bold", primaryColor: "#10b981", accentColor: "#f43f5e", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "mono", themeMode: "dark", heroStyle: "overlay" },
-  { name: "Classic Italian", templateKey: "classic", primaryColor: "#b91c1c", accentColor: "#15803d", borderRadiusStyle: "rounded", navStyle: "center", fontStyle: "serif", themeMode: "dim", heroStyle: "split" },
-  { name: "Modern Vegan", templateKey: "modern", primaryColor: "#84cc16", accentColor: "#14b8a6", borderRadiusStyle: "pill", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "overlay" },
-  { name: "BBQ Smokehouse", templateKey: "bold", primaryColor: "#ea580c", accentColor: "#dc2626", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "mono", themeMode: "dim", heroStyle: "overlay" },
-  { name: "Minimalist Coffee", templateKey: "modern", primaryColor: "#525252", accentColor: "#171717", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "split" },
-  { name: "Taco Stand", templateKey: "bold", primaryColor: "#f59e0b", accentColor: "#ef4444", borderRadiusStyle: "rounded", navStyle: "center", fontStyle: "playful", themeMode: "light", heroStyle: "overlay" },
-  { name: "Fine Dining", templateKey: "classic", primaryColor: "#9ca3af", accentColor: "#d1d5db", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "serif", themeMode: "dark", heroStyle: "overlay" },
-  { name: "Retro Diner", templateKey: "bold", primaryColor: "#06b6d4", accentColor: "#f43f5e", borderRadiusStyle: "pill", navStyle: "split", fontStyle: "playful", themeMode: "light", heroStyle: "split" },
-  { name: "Tech Food Truck", templateKey: "modern", primaryColor: "#3b82f6", accentColor: "#8b5cf6", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "mono", themeMode: "light", heroStyle: "overlay" },
-  { name: "Dim Sum Palace", templateKey: "classic", primaryColor: "#dc2626", accentColor: "#fbbf24", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "serif", themeMode: "dim", heroStyle: "split" },
-  { name: "Boba Shop", templateKey: "modern", primaryColor: "#fbcfe8", accentColor: "#f472b6", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "playful", themeMode: "light", heroStyle: "overlay" },
-  { name: "Gastro Pub", templateKey: "classic", primaryColor: "#b45309", accentColor: "#78350f", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "sans", themeMode: "dim", heroStyle: "split" },
-  { name: "Noodle Bar", templateKey: "bold", primaryColor: "#ef4444", accentColor: "#f59e0b", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "mono", themeMode: "dark", heroStyle: "overlay" },
-  { name: "Breakfast Club", templateKey: "modern", primaryColor: "#fde047", accentColor: "#fdba74", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "playful", themeMode: "light", heroStyle: "split" },
+  { name: "Cyberpunk Diner", templateKey: "bold", primaryColor: "#10b981", accentColor: "#f43f5e", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "mono", themeMode: "dark", heroStyle: "overlay", buttonStyle: "outline", backgroundPattern: "grid", cardShadow: "neon", animationStyle: "static" },
+  { name: "Classic Italian", templateKey: "classic", primaryColor: "#b91c1c", accentColor: "#15803d", borderRadiusStyle: "rounded", navStyle: "center", fontStyle: "serif", themeMode: "dim", heroStyle: "split", buttonStyle: "solid", backgroundPattern: "solid", cardShadow: "soft", animationStyle: "smooth" },
+  { name: "Modern Vegan", templateKey: "modern", primaryColor: "#84cc16", accentColor: "#14b8a6", borderRadiusStyle: "pill", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "overlay", buttonStyle: "soft", backgroundPattern: "solid", cardShadow: "none", animationStyle: "smooth" },
+  { name: "BBQ Smokehouse", templateKey: "bold", primaryColor: "#ea580c", accentColor: "#dc2626", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "mono", themeMode: "dim", heroStyle: "overlay", buttonStyle: "solid", backgroundPattern: "dots", cardShadow: "heavy", animationStyle: "static" },
+  { name: "Minimalist Coffee", templateKey: "modern", primaryColor: "#525252", accentColor: "#171717", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "split", buttonStyle: "ghost", backgroundPattern: "solid", cardShadow: "none", animationStyle: "smooth" },
+  { name: "Taco Stand", templateKey: "bold", primaryColor: "#f59e0b", accentColor: "#ef4444", borderRadiusStyle: "rounded", navStyle: "center", fontStyle: "playful", themeMode: "light", heroStyle: "overlay", buttonStyle: "solid", backgroundPattern: "dots", cardShadow: "heavy", animationStyle: "bouncy" },
+  { name: "Fine Dining", templateKey: "classic", primaryColor: "#9ca3af", accentColor: "#d1d5db", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "serif", themeMode: "dark", heroStyle: "overlay", buttonStyle: "outline", backgroundPattern: "solid", cardShadow: "none", animationStyle: "smooth" },
+  { name: "Retro Diner", templateKey: "bold", primaryColor: "#06b6d4", accentColor: "#f43f5e", borderRadiusStyle: "pill", navStyle: "split", fontStyle: "playful", themeMode: "light", heroStyle: "split", buttonStyle: "solid", backgroundPattern: "grid", cardShadow: "heavy", animationStyle: "bouncy" },
+  { name: "Tech Food Truck", templateKey: "modern", primaryColor: "#3b82f6", accentColor: "#8b5cf6", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "mono", themeMode: "light", heroStyle: "overlay", buttonStyle: "soft", backgroundPattern: "dots", cardShadow: "none", animationStyle: "bouncy" },
+  { name: "Dim Sum Palace", templateKey: "classic", primaryColor: "#dc2626", accentColor: "#fbbf24", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "serif", themeMode: "dim", heroStyle: "split", buttonStyle: "solid", backgroundPattern: "solid", cardShadow: "soft", animationStyle: "smooth" },
+  { name: "Boba Shop", templateKey: "modern", primaryColor: "#fbcfe8", accentColor: "#f472b6", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "playful", themeMode: "light", heroStyle: "overlay", buttonStyle: "soft", backgroundPattern: "dots", cardShadow: "none", animationStyle: "bouncy" },
+  { name: "Gastro Pub", templateKey: "classic", primaryColor: "#b45309", accentColor: "#78350f", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "sans", themeMode: "dim", heroStyle: "split", buttonStyle: "solid", backgroundPattern: "solid", cardShadow: "heavy", animationStyle: "smooth" },
+  { name: "Noodle Bar", templateKey: "bold", primaryColor: "#ef4444", accentColor: "#f59e0b", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "mono", themeMode: "dark", heroStyle: "overlay", buttonStyle: "outline", backgroundPattern: "grid", cardShadow: "neon", animationStyle: "bouncy" },
+  { name: "Breakfast Club", templateKey: "modern", primaryColor: "#fde047", accentColor: "#fdba74", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "playful", themeMode: "light", heroStyle: "split", buttonStyle: "solid", backgroundPattern: "dots", cardShadow: "soft", animationStyle: "bouncy" },
   
   // 20 NEW PRESETS
-  { name: "Mediterranean", templateKey: "classic", primaryColor: "#0284c7", accentColor: "#eab308", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "serif", themeMode: "light", heroStyle: "overlay" },
-  { name: "Matcha Cafe", templateKey: "modern", primaryColor: "#84cc16", accentColor: "#65a30d", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "split" },
-  { name: "London Pub", templateKey: "classic", primaryColor: "#7f1d1d", accentColor: "#d97706", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "serif", themeMode: "dim", heroStyle: "overlay" },
-  { name: "Neon Arcade", templateKey: "bold", primaryColor: "#f0abfc", accentColor: "#2dd4bf", borderRadiusStyle: "pill", navStyle: "split", fontStyle: "mono", themeMode: "dark", heroStyle: "overlay" },
-  { name: "Brutalist Block", templateKey: "modern", primaryColor: "#000000", accentColor: "#525252", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "mono", themeMode: "light", heroStyle: "split" },
-  { name: "Tropical Resort", templateKey: "modern", primaryColor: "#06b6d4", accentColor: "#d946ef", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "playful", themeMode: "light", heroStyle: "overlay" },
-  { name: "Parisian Cafe", templateKey: "classic", primaryColor: "#db2777", accentColor: "#9333ea", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "serif", themeMode: "light", heroStyle: "overlay" },
-  { name: "Vintage 1950s", templateKey: "classic", primaryColor: "#be123c", accentColor: "#1d4ed8", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "playful", themeMode: "light", heroStyle: "split" },
-  { name: "Nordic Kitchen", templateKey: "modern", primaryColor: "#9ca3af", accentColor: "#6b7280", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "split" },
-  { name: "Spicy Hotpot", templateKey: "bold", primaryColor: "#ef4444", accentColor: "#b91c1c", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "sans", themeMode: "dark", heroStyle: "overlay" },
-  { name: "Miami Vaporwave", templateKey: "bold", primaryColor: "#22d3ee", accentColor: "#db2777", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "mono", themeMode: "dim", heroStyle: "split" },
-  { name: "Sushi Omakase", templateKey: "classic", primaryColor: "#171717", accentColor: "#b91c1c", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "serif", themeMode: "dim", heroStyle: "overlay" },
-  { name: "Urban Pizzeria", templateKey: "modern", primaryColor: "#eab308", accentColor: "#ea580c", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "split" },
-  { name: "Bavarian Beer", templateKey: "classic", primaryColor: "#0369a1", accentColor: "#fcd34d", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "serif", themeMode: "dim", heroStyle: "overlay" },
-  { name: "Poke Bowl", templateKey: "modern", primaryColor: "#f472b6", accentColor: "#34d399", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "sans", themeMode: "light", heroStyle: "split" },
-  { name: "Desert Oasis", templateKey: "classic", primaryColor: "#ca8a04", accentColor: "#c2410c", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "sans", themeMode: "light", heroStyle: "overlay" },
-  { name: "Gothic Tavern", templateKey: "classic", primaryColor: "#4f46e5", accentColor: "#be185d", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "serif", themeMode: "dark", heroStyle: "overlay" },
-  { name: "Pastel Gelato", templateKey: "bold", primaryColor: "#fbcfe8", accentColor: "#bbf7d0", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "playful", themeMode: "light", heroStyle: "split" },
-  { name: "Soul Food Yard", templateKey: "modern", primaryColor: "#b45309", accentColor: "#84cc16", borderRadiusStyle: "rounded", navStyle: "center", fontStyle: "sans", themeMode: "light", heroStyle: "overlay" },
-  { name: "Dark Kitchen", templateKey: "bold", primaryColor: "#fbbf24", accentColor: "#10b981", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "mono", themeMode: "dark", heroStyle: "split" }
+  { name: "Mediterranean", templateKey: "classic", primaryColor: "#0284c7", accentColor: "#eab308", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "serif", themeMode: "light", heroStyle: "overlay", buttonStyle: "outline", backgroundPattern: "solid", cardShadow: "none", animationStyle: "smooth" },
+  { name: "Matcha Cafe", templateKey: "modern", primaryColor: "#84cc16", accentColor: "#65a30d", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "split", buttonStyle: "soft", backgroundPattern: "solid", cardShadow: "soft", animationStyle: "smooth" },
+  { name: "London Pub", templateKey: "classic", primaryColor: "#7f1d1d", accentColor: "#d97706", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "serif", themeMode: "dim", heroStyle: "overlay", buttonStyle: "solid", backgroundPattern: "solid", cardShadow: "heavy", animationStyle: "static" },
+  { name: "Neon Arcade", templateKey: "bold", primaryColor: "#f0abfc", accentColor: "#2dd4bf", borderRadiusStyle: "pill", navStyle: "split", fontStyle: "mono", themeMode: "dark", heroStyle: "overlay", buttonStyle: "outline", backgroundPattern: "grid", cardShadow: "neon", animationStyle: "bouncy" },
+  { name: "Brutalist Block", templateKey: "modern", primaryColor: "#000000", accentColor: "#525252", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "mono", themeMode: "light", heroStyle: "split", buttonStyle: "ghost", backgroundPattern: "solid", cardShadow: "none", animationStyle: "static" },
+  { name: "Tropical Resort", templateKey: "modern", primaryColor: "#06b6d4", accentColor: "#d946ef", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "playful", themeMode: "light", heroStyle: "overlay", buttonStyle: "soft", backgroundPattern: "dots", cardShadow: "soft", animationStyle: "bouncy" },
+  { name: "Parisian Cafe", templateKey: "classic", primaryColor: "#db2777", accentColor: "#9333ea", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "serif", themeMode: "light", heroStyle: "overlay", buttonStyle: "outline", backgroundPattern: "solid", cardShadow: "none", animationStyle: "smooth" },
+  { name: "Vintage 1950s", templateKey: "classic", primaryColor: "#be123c", accentColor: "#1d4ed8", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "playful", themeMode: "light", heroStyle: "split", buttonStyle: "solid", backgroundPattern: "grid", cardShadow: "heavy", animationStyle: "bouncy" },
+  { name: "Nordic Kitchen", templateKey: "modern", primaryColor: "#9ca3af", accentColor: "#6b7280", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "split", buttonStyle: "ghost", backgroundPattern: "solid", cardShadow: "none", animationStyle: "static" },
+  { name: "Spicy Hotpot", templateKey: "bold", primaryColor: "#ef4444", accentColor: "#b91c1c", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "sans", themeMode: "dark", heroStyle: "overlay", buttonStyle: "solid", backgroundPattern: "dots", cardShadow: "heavy", animationStyle: "bouncy" },
+  { name: "Miami Vaporwave", templateKey: "bold", primaryColor: "#22d3ee", accentColor: "#db2777", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "mono", themeMode: "dim", heroStyle: "split", buttonStyle: "outline", backgroundPattern: "grid", cardShadow: "neon", animationStyle: "smooth" },
+  { name: "Sushi Omakase", templateKey: "classic", primaryColor: "#171717", accentColor: "#b91c1c", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "serif", themeMode: "dim", heroStyle: "overlay", buttonStyle: "solid", backgroundPattern: "solid", cardShadow: "soft", animationStyle: "static" },
+  { name: "Urban Pizzeria", templateKey: "modern", primaryColor: "#eab308", accentColor: "#ea580c", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "sans", themeMode: "light", heroStyle: "split", buttonStyle: "solid", backgroundPattern: "grid", cardShadow: "heavy", animationStyle: "bouncy" },
+  { name: "Bavarian Beer", templateKey: "classic", primaryColor: "#0369a1", accentColor: "#fcd34d", borderRadiusStyle: "rounded", navStyle: "split", fontStyle: "serif", themeMode: "dim", heroStyle: "overlay", buttonStyle: "solid", backgroundPattern: "solid", cardShadow: "soft", animationStyle: "smooth" },
+  { name: "Poke Bowl", templateKey: "modern", primaryColor: "#f472b6", accentColor: "#34d399", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "sans", themeMode: "light", heroStyle: "split", buttonStyle: "soft", backgroundPattern: "dots", cardShadow: "none", animationStyle: "bouncy" },
+  { name: "Desert Oasis", templateKey: "classic", primaryColor: "#ca8a04", accentColor: "#c2410c", borderRadiusStyle: "sharp", navStyle: "center", fontStyle: "sans", themeMode: "light", heroStyle: "overlay", buttonStyle: "solid", backgroundPattern: "solid", cardShadow: "soft", animationStyle: "smooth" },
+  { name: "Gothic Tavern", templateKey: "classic", primaryColor: "#4f46e5", accentColor: "#be185d", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "serif", themeMode: "dark", heroStyle: "overlay", buttonStyle: "solid", backgroundPattern: "grid", cardShadow: "heavy", animationStyle: "static" },
+  { name: "Pastel Gelato", templateKey: "bold", primaryColor: "#fbcfe8", accentColor: "#bbf7d0", borderRadiusStyle: "pill", navStyle: "center", fontStyle: "playful", themeMode: "light", heroStyle: "split", buttonStyle: "soft", backgroundPattern: "solid", cardShadow: "none", animationStyle: "bouncy" },
+  { name: "Soul Food Yard", templateKey: "modern", primaryColor: "#b45309", accentColor: "#84cc16", borderRadiusStyle: "rounded", navStyle: "center", fontStyle: "sans", themeMode: "light", heroStyle: "overlay", buttonStyle: "solid", backgroundPattern: "dots", cardShadow: "soft", animationStyle: "smooth" },
+  { name: "Dark Kitchen", templateKey: "bold", primaryColor: "#fbbf24", accentColor: "#10b981", borderRadiusStyle: "sharp", navStyle: "split", fontStyle: "mono", themeMode: "dark", heroStyle: "split", buttonStyle: "outline", backgroundPattern: "grid", cardShadow: "neon", animationStyle: "smooth" }
 ];
 
-function LayoutEditor({ order, onChange }) {
+function _LayoutEditor({ order, onChange }) {
   const moveUp = (idx) => {
     if (idx === 0) return;
     const next = [...order];
@@ -266,7 +285,7 @@ function LayoutEditor({ order, onChange }) {
     [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
     onChange(next);
   };
-  const names = { story: "Our Story", location: "Location & Hours", menu: "Menu Builder", gallery: "Photo Gallery" };
+  const names = { story: "Our Story", location: "Location & Hours", menu: "Menu Builder", gallery: "Photo Gallery", specials: "Specials & Events", testimonials: "Customer Reviews" };
   return (
     <div className="space-y-2">
       {order.map((key, i) => (
@@ -300,8 +319,8 @@ function DeploymentsList({ deployments }) {
   );
 }
 
-function LocationsBuilder({ value, onChange }) {
-  const add = () => onChange([...value, { id: crypto.randomUUID(), name: "", address: "", city: "", state: "", mapUrl: "", hours: {} }]);
+function _LocationsBuilder({ value, onChange }) {
+  const add = () => onChange([...value, { id: crypto.randomUUID(), name: "", address: "", city: "", state: "", phone: "", contactEmail: "", hours: {} }]);
   const remove = (idx) => onChange(value.filter((_, i) => i !== idx));
   const update = (idx, field, val) => { const next = [...value]; next[idx][field] = val; onChange(next); };
   return (
@@ -310,13 +329,20 @@ function LocationsBuilder({ value, onChange }) {
       {value.map((loc, idx) => (
         <div key={loc.id || idx} className="rounded-xl border border-slate-200 bg-slate-100/50 p-4 relative">
           <button type="button" onClick={() => remove(idx)} className="absolute top-3 right-3 text-red-500 text-sm font-bold">&times; Remove</button>
-          <div className="grid gap-3 max-w-[90%]">
-            <Field label="Branch Name (e.g. Downtown)" value={loc.name} onChange={(v) => update(idx, 'name', v)} />
-            <Field label="Street Address" value={loc.address} onChange={(v) => update(idx, 'address', v)} />
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="City" value={loc.city} onChange={(v) => update(idx, 'city', v)} />
-              <Field label="State / ZIP" value={loc.state} onChange={(v) => update(idx, 'state', v)} />
+          <div className="grid gap-4 max-w-[95%]">
+            <div className="grid gap-3">
+              <Field label="Branch Name (e.g. Downtown)" value={loc.name} onChange={(v) => update(idx, 'name', v)} />
+              <Field label="Street Address" value={loc.address} onChange={(v) => update(idx, 'address', v)} />
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="City" value={loc.city} onChange={(v) => update(idx, 'city', v)} />
+                <Field label="State / ZIP" value={loc.state} onChange={(v) => update(idx, 'state', v)} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Phone Number" value={loc.phone} onChange={(v) => update(idx, 'phone', v)} />
+                <Field label="Email Address" value={loc.contactEmail} onChange={(v) => update(idx, 'contactEmail', v)} />
+              </div>
             </div>
+            <HoursBuilder value={loc.hours} onChange={(v) => update(idx, 'hours', v)} />
           </div>
         </div>
       ))}
@@ -325,7 +351,7 @@ function LocationsBuilder({ value, onChange }) {
   );
 }
 
-function HoursBuilder({ value, onChange }) {
+function _HoursBuilder({ value, onChange }) {
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const update = (day, val) => onChange({ ...value, [day]: val });
   return (
@@ -341,9 +367,12 @@ function HoursBuilder({ value, onChange }) {
   );
 }
 
-function GalleryManager({ value, onChange }) {
+function _GalleryManager({ value, onChange }) {
   const [input, setInput] = useState("");
-  const add = () => { if (input) { onChange([...value, input]); setInput(""); } };
+  const add = () => {
+    if (value.length >= 20) return window.alert("Maximum of 20 photos allowed.");
+    if (input) { onChange([...value, input]); setInput(""); }
+  };
   const remove = (idx) => onChange(value.filter((_, i) => i !== idx));
   return (
     <div className="space-y-4">
@@ -364,11 +393,11 @@ function GalleryManager({ value, onChange }) {
   );
 }
 
-function MenuBuilder({ value, onChange }) {
+function _MenuBuilder({ value, onChange }) {
   const addCategory = () => onChange([...value, { id: crypto.randomUUID(), name: "New Category", items: [] }]);
   const removeCategory = (idx) => onChange(value.filter((_, i) => i !== idx));
   const updateCategory = (idx, name) => { const next = [...value]; next[idx].name = name; onChange(next); };
-  const addItem = (catIdx) => { const next = [...value]; next[catIdx].items.push({ id: crypto.randomUUID(), name: "New Item", description: "", price: "$0.00" }); onChange(next); };
+  const addItem = (catIdx) => { const next = [...value]; next[catIdx].items.push({ id: crypto.randomUUID(), name: "New Item", description: "", price: "$0.00", badge: "" }); onChange(next); };
   const removeItem = (catIdx, itemIdx) => { const next = [...value]; next[catIdx].items.splice(itemIdx, 1); onChange(next); };
   const updateItem = (catIdx, itemIdx, field, val) => { const next = [...value]; next[catIdx].items[itemIdx][field] = val; onChange(next); };
 
@@ -386,6 +415,7 @@ function MenuBuilder({ value, onChange }) {
               <div key={item.id} className="grid grid-cols-12 gap-3 bg-white p-3 rounded-lg shadow-sm border border-slate-100 items-start">
                 <div className="col-span-12 sm:col-span-5"><input placeholder="Item Name" value={item.name} onChange={(e) => updateItem(cIdx, iIdx, 'name', e.target.value)} className="w-full text-sm font-semibold p-1 focus:outline-none focus:border-b focus:border-orange-500" /></div>
                 <div className="col-span-12 sm:col-span-3"><input placeholder="Price" value={item.price} onChange={(e) => updateItem(cIdx, iIdx, 'price', e.target.value)} className="w-full text-sm text-orange-600 font-bold p-1 focus:outline-none focus:border-b focus:border-orange-500" /></div>
+                <div className="col-span-12 sm:col-span-3"><input placeholder="Badge (eg. Spicy)" value={item.badge || ""} onChange={(e) => updateItem(cIdx, iIdx, 'badge', e.target.value)} className="w-full text-xs font-medium text-emerald-600 bg-emerald-50 rounded px-2 py-1 outline-none border border-emerald-100 focus:border-emerald-400" /></div>
                 <div className="col-span-12 sm:col-span-11"><input placeholder="Item description or ingredients..." value={item.description} onChange={(e) => updateItem(cIdx, iIdx, 'description', e.target.value)} className="w-full text-xs text-slate-500 p-1 focus:outline-none focus:border-b focus:border-orange-500" /></div>
                 <div className="col-span-12 sm:col-span-1 flex items-center justify-end"><button type="button" onClick={() => removeItem(cIdx, iIdx)} className="text-slate-400 hover:text-red-500 text-xl font-bold px-2">&times;</button></div>
               </div>
@@ -399,7 +429,53 @@ function MenuBuilder({ value, onChange }) {
   );
 }
 
-function ThemeGallery({ current, onSelect }) {
+function _SpecialsBuilder({ value, onChange }) {
+  const add = () => onChange([...value, { id: crypto.randomUUID(), title: "", description: "", badge: "", image: "" }]);
+  const remove = (idx) => onChange(value.filter((_, i) => i !== idx));
+  const update = (idx, field, val) => { const next = [...value]; next[idx][field] = val; onChange(next); };
+  return (
+    <div className="space-y-4">
+      {value.length === 0 && <p className="text-sm text-slate-400 italic">No specials or events added yet.</p>}
+      {value.map((s, idx) => (
+        <div key={s.id} className="rounded-xl border border-slate-200 bg-white/50 p-4 relative shadow-sm">
+          <button type="button" onClick={() => remove(idx)} className="absolute top-3 right-3 text-red-500 text-sm font-bold">&times; Remove</button>
+          <div className="grid gap-3 max-w-[90%]">
+            <Field label="Title (e.g. Taco Tuesday)" value={s.title} onChange={(v) => update(idx, 'title', v)} />
+            <Area label="Description" value={s.description} onChange={(v) => update(idx, 'description', v)} rows={2} />
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Badge (e.g. Weekly)" value={s.badge} onChange={(v) => update(idx, 'badge', v)} />
+              <Field label="Image URL (optional)" value={s.image} onChange={(v) => update(idx, 'image', v)} />
+            </div>
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={add} className="w-full rounded-xl border border-dashed border-slate-300 py-2.5 text-xs font-bold text-slate-600 hover:border-slate-500 hover:bg-slate-50 transition">+ Add Special / Event</button>
+    </div>
+  );
+}
+
+function _TestimonialsBuilder({ value, onChange }) {
+  const add = () => onChange([...value, { id: crypto.randomUUID(), quote: "", author: "" }]);
+  const remove = (idx) => onChange(value.filter((_, i) => i !== idx));
+  const update = (idx, field, val) => { const next = [...value]; next[idx][field] = val; onChange(next); };
+  return (
+    <div className="space-y-4">
+      {value.length === 0 && <p className="text-sm text-slate-400 italic">No reviews added yet.</p>}
+      {value.map((t, idx) => (
+        <div key={t.id} className="rounded-xl border border-slate-200 bg-white/50 p-4 relative shadow-sm">
+          <button type="button" onClick={() => remove(idx)} className="absolute top-3 right-3 text-red-500 text-sm font-bold">&times; Remove</button>
+          <div className="grid gap-3 max-w-[90%]">
+            <Area label="Review / Quote" value={t.quote} onChange={(v) => update(idx, 'quote', v)} rows={2} />
+            <Field label="Author Name" value={t.author} onChange={(v) => update(idx, 'author', v)} />
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={add} className="w-full rounded-xl border border-dashed border-slate-300 py-2.5 text-xs font-bold text-slate-600 hover:border-slate-500 hover:bg-slate-50 transition">+ Add Customer Review</button>
+    </div>
+  );
+}
+
+function _ThemeGallery({ current, onSelect }) {
   return (
     <div className="mb-6">
       <label className="block text-sm font-medium text-slate-700 mb-2">Visual Theme Gallery</label>
@@ -438,16 +514,108 @@ function ThemeGallery({ current, onSelect }) {
   );
 }
 
+const LayoutEditor = memo(_LayoutEditor);
+const LocationsBuilder = memo(_LocationsBuilder);
+const HoursBuilder = memo(_HoursBuilder);
+const GalleryManager = memo(_GalleryManager);
+const MenuBuilder = memo(_MenuBuilder);
+const SpecialsBuilder = memo(_SpecialsBuilder);
+const TestimonialsBuilder = memo(_TestimonialsBuilder);
+const ThemeGallery = memo(_ThemeGallery);
+
+function AnalyticsPane({ restaurant }) {
+  const analytics = restaurant.analytics || {};
+  const clicks = analytics.click || {};
+  
+  return (
+    <div className="flex-1 overflow-y-auto px-6 py-8 scrollbar-thin scrollbar-thumb-slate-200 bg-slate-50 flex flex-col items-center">
+      <div className="w-full max-w-4xl space-y-8">
+        <header>
+          <h2 className="text-2xl font-bold text-slate-900 border-b border-slate-200 pb-4">Performance Analytics</h2>
+          <p className="text-slate-500 mt-2">Track real-time interactions across your live deployed websites.</p>
+        </header>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 text-center">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Total Page Views</h3>
+            <span className="text-4xl font-black text-emerald-600">{restaurant.views || 0}</span>
+          </div>
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 text-center">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Reservations Clicked</h3>
+            <span className="text-4xl font-black text-orange-600">{clicks.reserve || 0}</span>
+          </div>
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 text-center">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Orders Clicked</h3>
+            <span className="text-4xl font-black text-blue-600">{clicks.order || 0}</span>
+          </div>
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 text-center">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Floating CTA Clicks</h3>
+            <span className="text-4xl font-black text-purple-600">{clicks.floating_cta || 0}</span>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4 border-b border-slate-200 pb-2">Event Breakdown</h3>
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+            {Object.keys(analytics).length === 0 ? (
+              <div className="text-center text-slate-400 py-10">Waiting for live site traffic...</div>
+            ) : (
+              <ul className="space-y-4">
+                {Object.entries(analytics).map(([action, labels]) => (
+                  <li key={action}>
+                    <h4 className="text-slate-900 font-bold capitalize mb-2">{action} Events</h4>
+                    <ul className="space-y-2 pl-4">
+                      {Object.entries(labels).map(([label, count]) => (
+                        <li key={label} className="flex justify-between items-center text-sm border-b border-slate-100 pb-2">
+                          <span className="text-slate-600 font-mono">{label}</span>
+                          <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg">{count}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Dashboard({ token, user, restaurant, onUpdate, onLogout }) {
   const [draft, setDraft] = useState(normalizeRestaurant(restaurant));
   const [status, setStatus] = useState("");
   const [deployments, setDeployments] = useState([]);
   const [pub, setPub] = useState(null);
   const [previewHtml, setPreviewHtml] = useState(null);
-  const [showPreview, setShowPreview] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
+  const [activeTab, setActiveTab] = useState('analytics');
   const debounceRef = useRef(null);
+  const updatersRef = useRef({});
 
-  const applyPreset = (p) => setDraft({ ...draft, templateKey: p.templateKey, primaryColor: p.primaryColor, accentColor: p.accentColor, borderRadiusStyle: p.borderRadiusStyle, navStyle: p.navStyle, fontStyle: p.fontStyle, themeMode: p.themeMode, heroStyle: p.heroStyle });
+  const getUpdater = useCallback((field) => {
+    if (!updatersRef.current[field]) {
+      updatersRef.current[field] = (val) => setDraft(prev => ({ ...prev, [field]: typeof val === 'function' ? val(prev[field]) : val }));
+    }
+    return updatersRef.current[field];
+  }, []);
+
+  const applyPreset = useCallback((p) => setDraft(prev => ({ 
+    ...prev, 
+    templateKey: p.templateKey, 
+    primaryColor: p.primaryColor, 
+    accentColor: p.accentColor, 
+    borderRadiusStyle: p.borderRadiusStyle, 
+    navStyle: p.navStyle, 
+    fontStyle: p.fontStyle, 
+    themeMode: p.themeMode, 
+    heroStyle: p.heroStyle,
+    buttonStyle: p.buttonStyle,
+    backgroundPattern: p.backgroundPattern,
+    cardShadow: p.cardShadow,
+    animationStyle: p.animationStyle 
+  })), []);
 
   useEffect(() => { request(`/api/restaurants/${restaurant.id}/deployments`, { token }).then((d) => setDeployments(d.deployments)).catch(() => setDeployments([])); }, [restaurant.id, token]);
 
@@ -485,16 +653,18 @@ function Dashboard({ token, user, restaurant, onUpdate, onLogout }) {
       {/* LEFT PANE: Editor Controls */}
       <div className={`shrink-0 border-r border-slate-200 bg-white flex flex-col h-full z-10 shadow-xl transition-all duration-300 ${showPreview ? "w-full lg:w-[500px] xl:w-[600px]" : "w-full"}`}>
         
-        <header className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
-          <div>
-            <h1 className="font-bold text-slate-900 truncate w-48">{draft.name || "Draft"}</h1>
-            <div className="flex gap-3 text-xs font-medium text-slate-500">
-              <span>Live Editor</span>
-              <span className="text-slate-300">|</span>
-              <span className="text-emerald-600 font-bold tracking-wide">{restaurant.views || 0} Total Views</span>
-            </div>
+        <header className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex flex-wrap gap-4 items-center justify-between shrink-0">
+          <div className="w-1/3 min-w-[200px]">
+            <span className={`inline-block w-2.5 h-2.5 rounded-full mr-2 ${restaurant.publishedAt ? 'bg-emerald-500' : 'bg-amber-400'}`}></span>
+            <h1 className="font-bold text-slate-900 truncate inline-block align-middle max-w-[calc(100%-20px)] text-lg">{draft.name || "Draft"}</h1>
           </div>
-          <div className="flex items-center gap-2">
+          
+          <div className="flex bg-slate-200/60 p-1 rounded-xl shadow-inner mx-auto w-auto">
+            <button onClick={() => setActiveTab('analytics')} className={`transition-all duration-300 font-bold px-5 py-2 text-sm rounded-lg ${activeTab === 'analytics' ? 'bg-white shadow-sm text-slate-900 scale-100' : 'text-slate-500 hover:text-slate-700 scale-95'}`}>📈 Performance Insights</button>
+            <button onClick={() => setActiveTab('editor')} className={`transition-all duration-300 font-bold px-5 py-2 text-sm rounded-lg ${activeTab === 'editor' ? 'bg-white shadow-sm text-slate-900 scale-100' : 'text-slate-500 hover:text-slate-700 scale-95'}`}>🎨 Website Builder</button>
+          </div>
+
+          <div className="flex items-center justify-end w-1/3 min-w-[300px] gap-2">
             <button onClick={() => setShowPreview(!showPreview)} className={`rounded-lg px-3 py-1.5 text-xs font-bold shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-slate-300 ${showPreview ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-slate-900 text-white hover:bg-slate-800'}`} title="Toggle Live Preview Pane">
               {showPreview ? "Hide Preview \u2192" : "\u2190 Show Live Preview"}
             </button>
@@ -508,18 +678,39 @@ function Dashboard({ token, user, restaurant, onUpdate, onLogout }) {
         </header>
         
         {status && <div className="bg-orange-100 text-orange-700 text-xs font-bold text-center py-1 shrink-0 animate-pulse">{status}</div>}
-        <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-thin scrollbar-thumb-slate-200 bg-white flex flex-col items-center">
-          <div className={`space-y-12 w-full ${showPreview ? "" : "max-w-4xl"}`}>
-            
-            {/* Design Generation Settings */}
-            <section>
+        
+        {activeTab === 'editor' ? (
+          <>
+            {/* Quick Nav Bar - Static */}
+            <div className="bg-slate-50 border-b border-slate-200 px-6 py-2 flex gap-2 overflow-x-auto scrollbar-hide shadow-sm shrink-0">
+              {[
+                {id: "sec-design", label: "Design"},
+                {id: "sec-basis", label: "Basics"},
+                {id: "sec-actions", label: "Links"},
+                {id: "sec-marketing", label: "Marketing"},
+                {id: "sec-specials", label: "Specials"},
+                {id: "sec-reviews", label: "Reviews"},
+                {id: "sec-menu", label: "Menu"},
+                {id: "sec-gallery", label: "Gallery"}
+              ].map(sec => (
+                <button key={sec.id} type="button" onClick={() => document.getElementById(sec.id)?.scrollIntoView({behavior: 'smooth'})} className="px-3 py-1.5 whitespace-nowrap bg-white hover:bg-orange-100 text-slate-600 hover:text-orange-700 text-xs font-bold rounded-full transition-colors flex-shrink-0 shadow-sm border border-slate-200">
+                  {sec.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-thin scrollbar-thumb-slate-200 bg-white flex flex-col items-center">
+              <div className="space-y-12 w-full max-w-4xl relative">
+                
+                {/* Design Generation Settings */}
+            <section id="sec-design" className="scroll-mt-20">
               <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Generative Design Engine</h2>
               <ThemeGallery current={draft} onSelect={applyPreset} />
               
               <div className="space-y-4 rounded-2xl bg-slate-50 p-5 border border-slate-100 mt-2">
                 <div className="grid grid-cols-2 gap-4">
                   <label className="block text-sm font-medium text-slate-700">Typography Font
-                    <select value={draft.fontStyle} onChange={(e) => setDraft({ ...draft, fontStyle: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
+                    <select value={draft.fontStyle} onChange={(e) => getUpdater('fontStyle')(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
                       <option value="sans">Modern Sans</option>
                       <option value="serif">Elegant Serif</option>
                       <option value="mono">Tech Monospace</option>
@@ -527,7 +718,7 @@ function Dashboard({ token, user, restaurant, onUpdate, onLogout }) {
                     </select>
                   </label>
                   <label className="block text-sm font-medium text-slate-700">Theme Mode
-                    <select value={draft.themeMode} onChange={(e) => setDraft({ ...draft, themeMode: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
+                    <select value={draft.themeMode} onChange={(e) => getUpdater('themeMode')(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
                       <option value="light">Crisp Light Mode</option>
                       <option value="dim">Moody Dim Mode</option>
                       <option value="dark">Deep Dark Mode</option>
@@ -536,14 +727,14 @@ function Dashboard({ token, user, restaurant, onUpdate, onLogout }) {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <label className="block text-sm font-medium text-slate-700">Card & Button Shape
-                    <select value={draft.borderRadiusStyle} onChange={(e) => setDraft({ ...draft, borderRadiusStyle: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
+                    <select value={draft.borderRadiusStyle} onChange={(e) => getUpdater('borderRadiusStyle')(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
                       <option value="sharp">Sharp (0px)</option>
                       <option value="rounded">Rounded</option>
                       <option value="pill">Pill / Soft</option>
                     </select>
                   </label>
                   <label className="block text-sm font-medium text-slate-700">Menu Navigation
-                    <select value={draft.navStyle} onChange={(e) => setDraft({ ...draft, navStyle: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
+                    <select value={draft.navStyle} onChange={(e) => getUpdater('navStyle')(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
                       <option value="split">Logo Left, Links Right</option>
                       <option value="center">Fully Centered</option>
                     </select>
@@ -551,22 +742,62 @@ function Dashboard({ token, user, restaurant, onUpdate, onLogout }) {
                 </div>
                 <div className="grid grid-cols-1 gap-4">
                   <label className="block text-sm font-medium text-slate-700">Hero Section Layout
-                    <select value={draft.heroStyle} onChange={(e) => setDraft({ ...draft, heroStyle: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
+                    <select value={draft.heroStyle} onChange={(e) => getUpdater('heroStyle')(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
                       <option value="overlay">Full Width Background Overlay</option>
                       <option value="split">Split Screen / Side-by-Side</option>
+                    </select>
+                  </label>
+                  <label className="block text-sm font-medium text-slate-700">Hero Background Style
+                    <select value={draft.heroBackground} onChange={(e) => getUpdater('heroBackground')(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
+                      <option value="static">Static Image</option>
+                      <option value="carousel">Image Carousel (Slideshow)</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="block text-sm font-medium text-slate-700">Button Styling
+                    <select value={draft.buttonStyle} onChange={(e) => getUpdater('buttonStyle')(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
+                      <option value="solid">Solid Fill</option>
+                      <option value="outline">Thin Outline</option>
+                      <option value="soft">Soft & Subtle</option>
+                      <option value="ghost">Ghost (Hover Only)</option>
+                    </select>
+                  </label>
+                  <label className="block text-sm font-medium text-slate-700">Background Pattern
+                    <select value={draft.backgroundPattern} onChange={(e) => getUpdater('backgroundPattern')(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
+                      <option value="solid">Pure Solid</option>
+                      <option value="dots">Subtle Dots Texture</option>
+                      <option value="grid">Technical Grid</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="block text-sm font-medium text-slate-700">Card Shadows
+                    <select value={draft.cardShadow} onChange={(e) => getUpdater('cardShadow')(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
+                      <option value="none">Flat Design (No Shadow)</option>
+                      <option value="soft">Soft & Elegant</option>
+                      <option value="heavy">Heavy & Deep</option>
+                      <option value="neon">Cyberpunk Neon Glow</option>
+                    </select>
+                  </label>
+                  <label className="block text-sm font-medium text-slate-700">Animation Physics
+                    <select value={draft.animationStyle} onChange={(e) => getUpdater('animationStyle')(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 active:ring-0">
+                      <option value="static">Instant (No Animation)</option>
+                      <option value="smooth">Smooth Fades</option>
+                      <option value="bouncy">Bouncy / Playful Spring</option>
                     </select>
                   </label>
                 </div>
                 <div className="flex gap-4">
                   <label className="flex-1 block text-sm font-medium text-slate-700">Primary Color
                     <div className="mt-1 flex items-center overflow-hidden rounded-xl border border-slate-200 bg-white pl-2 focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20">
-                      <input type="color" value={draft.primaryColor} onChange={(e) => setDraft({ ...draft, primaryColor: e.target.value })} className="h-8 w-8 cursor-pointer rounded-full border-0 bg-transparent p-0" />
+                      <input type="color" value={draft.primaryColor} onChange={(e) => getUpdater('primaryColor')(e.target.value)} className="h-8 w-8 cursor-pointer rounded-full border-0 bg-transparent p-0" />
                       <span className="px-3 text-xs text-slate-500 font-mono uppercase">{draft.primaryColor}</span>
                     </div>
                   </label>
                   <label className="flex-1 block text-sm font-medium text-slate-700">Accent Color
                     <div className="mt-1 flex items-center overflow-hidden rounded-xl border border-slate-200 bg-white pl-2 focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20">
-                      <input type="color" value={draft.accentColor} onChange={(e) => setDraft({ ...draft, accentColor: e.target.value })} className="h-8 w-8 cursor-pointer rounded-full border-0 bg-transparent p-0" />
+                      <input type="color" value={draft.accentColor} onChange={(e) => getUpdater('accentColor')(e.target.value)} className="h-8 w-8 cursor-pointer rounded-full border-0 bg-transparent p-0" />
                       <span className="px-3 text-xs text-slate-500 font-mono uppercase">{draft.accentColor}</span>
                     </div>
                   </label>
@@ -574,28 +805,22 @@ function Dashboard({ token, user, restaurant, onUpdate, onLogout }) {
               </div>
             </section>
 
-            {/* Layout Engine */}
-            <section>
-              <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Modular Layout Engine</h2>
-              <p className="text-xs text-slate-500 mb-3">Re-order how sections appear on your homepage.</p>
-              <LayoutEditor order={draft.sectionOrder} onChange={(v) => setDraft({ ...draft, sectionOrder: v })} />
-            </section>
-
             {/* Core General Detail */}
-            <section>
+            <section id="sec-basis" className="scroll-mt-20">
               <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Restaurant Identity</h2>
               <div className="space-y-4">
-                <Field label="Restaurant Name" value={draft.name} onChange={(v) => setDraft({ ...draft, name: v })} />
-                <Field label="Cuisine Type" value={draft.cuisine} onChange={(v) => setDraft({ ...draft, cuisine: v })} />
+                <Field label="Restaurant Name" value={draft.name} onChange={getUpdater('name')} />
+                <Field label="Logo Image URL (optional)" value={draft.logoUrl} onChange={getUpdater('logoUrl')} />
+                <Field label="Cuisine Type" value={draft.cuisine} onChange={getUpdater('cuisine')} />
                 
                 <div className="space-y-1 relative group mt-4">
-                  <Area label="Our Story (About Section)" value={draft.story} rows={3} onChange={(v) => setDraft({ ...draft, story: v })} />
+                  <Area label="Our Story (About Section)" value={draft.story} rows={3} onChange={getUpdater('story')} />
                   <label className="flex items-center gap-1.5 absolute top-0 right-0 text-[10px] uppercase font-bold text-slate-500">
-                    <input type="checkbox" checked={!!draft.showStory} onChange={(e) => setDraft({ ...draft, showStory: e.target.checked })} /> Show
+                    <input type="checkbox" checked={!!draft.showStory} onChange={(e) => getUpdater('showStory')(e.target.checked)} /> Show
                   </label>
                 </div>
-                <Field label="Hero Title" value={draft.heroTitle} onChange={(v) => setDraft({ ...draft, heroTitle: v })} />
-                <Field label="Hero Subtitle" value={draft.heroSubtitle} onChange={(v) => setDraft({ ...draft, heroSubtitle: v })} />
+                <Field label="Hero Title" value={draft.heroTitle} onChange={getUpdater('heroTitle')} />
+                <Field label="Hero Subtitle" value={draft.heroSubtitle} onChange={getUpdater('heroSubtitle')} />
               </div>
             </section>
 
@@ -603,47 +828,150 @@ function Dashboard({ token, user, restaurant, onUpdate, onLogout }) {
             <section>
               <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Search Engine Optimization (SEO)</h2>
               <div className="space-y-4">
-                <Field label="Google Meta Title" value={draft.seoTitle} onChange={(v) => setDraft({ ...draft, seoTitle: v })} />
-                <Area label="Meta Description (Summary for Facebook/Google)" value={draft.seoDescription} rows={2} onChange={(v) => setDraft({ ...draft, seoDescription: v })} />
+                 <Field label="SEO Title (Browser Tab)" value={draft.seoTitle} onChange={getUpdater('seoTitle')} />
+                 <Area label="SEO Meta Description (Search Snippet)" value={draft.seoDescription} rows={2} onChange={getUpdater('seoDescription')} />
               </div>
             </section>
 
-            {/* Menu Builder  */}
+            {/* Locations */}
             <section>
-               <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Virtual Menu</h2>
-               <MenuBuilder value={draft.menuCategories} onChange={(v) => setDraft({ ...draft, menuCategories: v })} />
+              <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Main Location & Hours</h2>
+              <div className="space-y-4">
+                <Field label="Street Address" value={draft.address} onChange={getUpdater('address')} />
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="City" value={draft.city} onChange={getUpdater('city')} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="State" value={draft.state} onChange={getUpdater('state')} />
+                    <Field label="ZIP" value={draft.zip} onChange={getUpdater('zip')} />
+                  </div>
+                </div>
+                <Field label="Google Maps Iframe Embed URL" value={draft.mapIframeUrl} onChange={getUpdater('mapIframeUrl')} />
+                
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <h3 className="block text-sm font-medium text-slate-700 mb-3">Operating Hours</h3>
+                  <HoursBuilder value={draft.hours} onChange={getUpdater('hours')} />
+                </div>
+                <LocationsBuilder value={draft.extraLocations} onChange={getUpdater('extraLocations')} />
+              </div>
             </section>
 
-            {/* Photo Gallery */}
+            {/* Contact Information */}
             <section>
-               <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Visual Gallery</h2>
-               <GalleryManager value={draft.gallery} onChange={(v) => setDraft({ ...draft, gallery: v })} />
+              <h2 className="mb-4 flex items-center justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
+                Contact & Socials
+              </h2>
+              <div className="space-y-4">
+                <div className="space-y-1 relative group">
+                  <Field label="Phone Number" value={draft.phone} onChange={getUpdater('phone')} />
+                  <label className="flex items-center gap-1.5 absolute top-0 right-0 text-[10px] uppercase font-bold text-slate-500">
+                    <input type="checkbox" checked={!!draft.showPhone} onChange={(e) => getUpdater('showPhone')(e.target.checked)} /> Show Publicly
+                  </label>
+                </div>
+                <div className="space-y-1 relative group">
+                  <Field label="Email Address" value={draft.contactEmail} onChange={getUpdater('contactEmail')} />
+                  <label className="flex items-center gap-1.5 absolute top-0 right-0 text-[10px] uppercase font-bold text-slate-500">
+                    <input type="checkbox" checked={!!draft.showEmail} onChange={(e) => getUpdater('showEmail')(e.target.checked)} /> Show Publicly
+                  </label>
+                </div>
+                <Field label="Instagram Profile URL" value={draft.instagramUrl} onChange={getUpdater('instagramUrl')} />
+                <Field label="Facebook Page URL" value={draft.facebookUrl} onChange={getUpdater('facebookUrl')} />
+                <Field label="TikTok Profile URL" value={draft.tiktokUrl} onChange={getUpdater('tiktokUrl')} />
+              </div>
             </section>
 
-            {/* Timings */}
-            <section>
-               <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Timings & Location</h2>
-               <div className="grid gap-4 mb-4">
-                 <Field label="Street Address" value={draft.address} onChange={(v) => setDraft({ ...draft, address: v })} />
-                 <div className="grid grid-cols-2 gap-4">
-                    <Field label="City" value={draft.city} onChange={(v) => setDraft({ ...draft, city: v })} />
-                    <Field label="State / ZIP" value={draft.state} onChange={(v) => setDraft({ ...draft, state: v })} />
-                 </div>
-               </div>
-               <HoursBuilder value={draft.hours} onChange={(v) => setDraft({ ...draft, hours: v })} />
-               
-               <LocationsBuilder value={draft.extraLocations} onChange={(v) => setDraft({ ...draft, extraLocations: v })} />
+            {/* Quick Links */}
+            <section id="sec-actions" className="scroll-mt-20">
+              <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Action URLs (Call to Actions)</h2>
+              <div className="space-y-4">
+                <Field label="Reservation / Booking Link" value={draft.reservationUrl} onChange={getUpdater('reservationUrl')} />
+                <Field label="Online Ordering Link (Pickup)" value={draft.orderUrl} onChange={getUpdater('orderUrl')} />
+                <Field label="Delivery Platform Link (UberEats, etc)" value={draft.deliveryUrl} onChange={getUpdater('deliveryUrl')} />
+              </div>
+            </section>
+
+            {/* Conversions & Marketing */}
+            <section id="sec-marketing" className="scroll-mt-20">
+              <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400 border-t border-slate-100 pt-10">Marketing & Conversions</h2>
+              
+              <div className="space-y-6">
+                <div className="rounded-2xl bg-indigo-50/50 p-5 border border-indigo-100">
+                  <div className="flex items-center gap-3 mb-4">
+                    <input type="checkbox" checked={!!draft.promoBanner?.enabled} onChange={(e) => getUpdater('promoBanner')({ ...draft.promoBanner, enabled: e.target.checked })} className="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500" />
+                    <span className="font-bold text-indigo-900">Enable Top Promotional Banner</span>
+                  </div>
+                  {draft.promoBanner?.enabled && (
+                    <div className="space-y-3 pl-8">
+                      <Field label="Banner Message (e.g. 20% Off Weekend Specials!)" value={draft.promoBanner.text} onChange={(v) => getUpdater('promoBanner')({ ...draft.promoBanner, text: v })} />
+                      <Field label="Banner Link URL (optional)" value={draft.promoBanner.link} onChange={(v) => getUpdater('promoBanner')({ ...draft.promoBanner, link: v })} />
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-2xl bg-emerald-50/50 p-5 border border-emerald-100">
+                  <div className="flex items-center gap-3 mb-4">
+                    <input type="checkbox" checked={!!draft.floatingCTA?.enabled} onChange={(e) => getUpdater('floatingCTA')({ ...draft.floatingCTA, enabled: e.target.checked })} className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500" />
+                    <span className="font-bold text-emerald-900">Enable Floating "Action" Widget</span>
+                  </div>
+                  {draft.floatingCTA?.enabled && (
+                    <div className="space-y-3 pl-8">
+                      <Field label="Widget Text (e.g. Order Online Now)" value={draft.floatingCTA.text} onChange={(v) => getUpdater('floatingCTA')({ ...draft.floatingCTA, text: v })} />
+                      <Field label="Widget Destination URL" value={draft.floatingCTA.link} onChange={(v) => getUpdater('floatingCTA')({ ...draft.floatingCTA, link: v })} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* Layout Order Engine */}
+            <section id="sec-layout" className="scroll-mt-20">
+              <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Modular Layout Engine</h2>
+              <LayoutEditor order={draft.sectionOrder} onChange={getUpdater('sectionOrder')} />
+            </section>
+
+            <section id="sec-specials" className="scroll-mt-20">
+               <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400 border-t border-slate-100 pt-10">Specials & Events</h2>
+               <SpecialsBuilder value={draft.specials} onChange={getUpdater('specials')} />
+            </section>
+
+            <section id="sec-reviews" className="scroll-mt-20">
+               <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400 border-t border-slate-100 pt-10">Customer Reviews</h2>
+               <TestimonialsBuilder value={draft.testimonials} onChange={getUpdater('testimonials')} />
+            </section>
+
+            {/* Menu */}
+            <section id="sec-menu" className="scroll-mt-20">
+              <div className="flex items-center justify-between border-t border-slate-100 pt-10 mb-4">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Restaurant Menu</h2>
+                <select value={draft.menuFormat} onChange={(e) => getUpdater('menuFormat')(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs outline-none focus:border-orange-500">
+                  <option value="classic">Format: Classic Text</option>
+                  <option value="visual">Format: Photo Cards</option>
+                  <option value="fine">Format: Fine Dining (Dots)</option>
+                </select>
+              </div>
+              <MenuBuilder value={draft.menuCategories} onChange={getUpdater('menuCategories')} />
+            </section>
+
+            {/* Image Gallery */}
+            <section id="sec-gallery" className="scroll-mt-20">
+              <div className="flex items-center justify-between border-t border-slate-100 pt-10 mb-4">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Photo Gallery</h2>
+                <select value={draft.galleryFormat} onChange={(e) => getUpdater('galleryFormat')(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs outline-none focus:border-orange-500">
+                  <option value="grid">Layout: Brick Grid</option>
+                  <option value="carousel">Layout: Horizontal Slider</option>
+                </select>
+              </div>
+              <GalleryManager value={draft.gallery} onChange={getUpdater('gallery')} />
             </section>
 
              {/* Deployments & Privacy */}
-             <section className="border-t border-slate-200 pt-8">
+             <section id="sec-deploy" className="border-t border-slate-200 pt-8 scroll-mt-20">
                <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Published Sites</h2>
                <DeploymentsList deployments={deployments} />
 
                <div className="mt-8">
                  <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Privacy Controls</h2>
                  <label className="flex items-center gap-3 p-3 bg-red-50 rounded-xl border border-red-100">
-                  <input type="checkbox" checked={!!draft.isOffline} onChange={(e) => setDraft({ ...draft, isOffline: e.target.checked })} className="w-4 h-4 text-red-600 rounded" />
+                  <input type="checkbox" checked={!!draft.isOffline} onChange={(e) => getUpdater('isOffline')(e.target.checked)} className="w-4 h-4 text-red-600 rounded" />
                   <span className="text-sm font-semibold text-red-900">Take Website Offline Temporarily</span>
                 </label>
                </div>
@@ -652,9 +980,13 @@ function Dashboard({ token, user, restaurant, onUpdate, onLogout }) {
            <div className="pb-20"></div>
           </div>
         </div>
+        </>
+        ) : (
+          <AnalyticsPane restaurant={restaurant} />
+        )}
       </div>
-
-      {/* RIGHT PANE: Live Target Device Simulator */}
+      
+      {/* RIGHT PANE: Live Device Simulator */}
       {showPreview && (
         <div className="flex-1 bg-slate-200 relative shadow-inner overflow-hidden flex flex-col transition-all duration-300">
           <div className="bg-slate-800 text-slate-400 text-xs px-4 py-2 border-b border-slate-900 flex justify-between items-center shadow-md shrink-0">

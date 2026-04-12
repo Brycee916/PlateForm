@@ -38,15 +38,41 @@ export function renderRestaurantSite(restaurant) {
     ? `--bg: #27272a; --surface: #3f3f46; --surface-alt: #52525b; --text: #f4f4f5; --muted: #a1a1aa; --shadow: rgba(0,0,0,0.4); --border: rgba(255,255,255,0.06);`
     : `--bg: #ffffff; --surface: #f9fafb; --surface-alt: #f3f4f6; --text: #1f2937; --muted: #6b7280; --shadow: rgba(0,0,0,0.06); --border: rgba(0,0,0,0.06);`;
 
+  let buttonCss = "";
+  if (restaurant.buttonStyle === "outline") {
+    buttonCss = `.btn-primary { background: transparent; color: var(--primary); border: 2px solid var(--primary); box-shadow: none; } .btn-primary:hover { background: color-mix(in srgb, var(--primary) 10%, transparent); box-shadow: none; }`;
+  } else if (restaurant.buttonStyle === "ghost") {
+    buttonCss = `.btn-primary { background: transparent; color: var(--primary); box-shadow: none; } .btn-primary:hover { background: color-mix(in srgb, var(--primary) 10%, transparent); box-shadow: none; }`;
+  } else if (restaurant.buttonStyle === "soft") {
+    buttonCss = `.btn-primary { background: color-mix(in srgb, var(--primary) 20%, transparent); color: var(--primary); box-shadow: none; } .btn-primary:hover { background: color-mix(in srgb, var(--primary) 30%, transparent); box-shadow: none; }`;
+  } else {
+    buttonCss = `.btn-primary { background: var(--primary); color: white; box-shadow: 0 8px 25px color-mix(in srgb, var(--primary) 40%, transparent); } .btn-primary:hover { box-shadow: 0 12px 30px color-mix(in srgb, var(--primary) 60%, transparent); }`;
+  }
+
+  let shadowCss = "";
+  if (restaurant.cardShadow === "none") shadowCss = `box-shadow: none;`;
+  else if (restaurant.cardShadow === "heavy") shadowCss = `box-shadow: 0 25px 50px -12px var(--shadow), 0 10px 15px -3px var(--shadow);`;
+  else if (restaurant.cardShadow === "neon") shadowCss = `box-shadow: 0 0 25px color-mix(in srgb, var(--primary) 40%, transparent); border-color: color-mix(in srgb, var(--primary) 30%, transparent);`;
+  else shadowCss = `box-shadow: 0 20px 40px -10px var(--shadow), 0 1px 3px var(--shadow);`;
+
+  let animCss = "";
+  if (restaurant.animationStyle === "static") animCss = `* { transition: none !important; } .card:hover, .btn:hover { transform: none !important; }`;
+  else if (restaurant.animationStyle === "bouncy") animCss = `.card, .btn, .menu-item { transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important; }`;
+
+  let patternCss = "";
+  if (restaurant.backgroundPattern === "dots") patternCss = `background-image: radial-gradient(var(--border) 1.5px, transparent 1.5px); background-size: 24px 24px;`;
+  else if (restaurant.backgroundPattern === "grid") patternCss = `background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 40px 40px;`;
+
+
   const serviceLinks = [
-    restaurant.reservationUrl ? `<a class="btn btn-primary" href="${safe(restaurant.reservationUrl)}" target="_blank" rel="noreferrer">Reserve</a>` : "",
-    restaurant.orderUrl ? `<a class="btn btn-secondary" href="${safe(restaurant.orderUrl)}" target="_blank" rel="noreferrer">Order Online</a>` : "",
-    restaurant.deliveryUrl ? `<a class="btn btn-secondary" href="${safe(restaurant.deliveryUrl)}" target="_blank" rel="noreferrer">Delivery</a>` : "",
+    restaurant.reservationUrl ? `<a class="btn btn-primary" href="${safe(restaurant.reservationUrl)}" target="_blank" rel="noreferrer" onclick="window.__track?.('click', 'reserve')">Reserve</a>` : "",
+    restaurant.orderUrl ? `<a class="btn btn-secondary" href="${safe(restaurant.orderUrl)}" target="_blank" rel="noreferrer" onclick="window.__track?.('click', 'order')">Order Online</a>` : "",
+    restaurant.deliveryUrl ? `<a class="btn btn-secondary" href="${safe(restaurant.deliveryUrl)}" target="_blank" rel="noreferrer" onclick="window.__track?.('click', 'delivery')">Delivery</a>` : "",
   ].filter(Boolean).join("");
 
   const headerServiceLinks = [
-    restaurant.reservationUrl ? `<a class="nav-btn nav-btn-primary" href="${safe(restaurant.reservationUrl)}" target="_blank" rel="noreferrer">Reserve</a>` : "",
-    restaurant.orderUrl ? `<a class="nav-btn nav-btn-secondary" href="${safe(restaurant.orderUrl)}" target="_blank" rel="noreferrer">Order</a>` : "",
+    restaurant.reservationUrl ? `<a class="nav-btn nav-btn-primary" href="${safe(restaurant.reservationUrl)}" target="_blank" rel="noreferrer" onclick="window.__track?.('click', 'reserve')">Reserve</a>` : "",
+    restaurant.orderUrl ? `<a class="nav-btn nav-btn-secondary" href="${safe(restaurant.orderUrl)}" target="_blank" rel="noreferrer" onclick="window.__track?.('click', 'order')">Order</a>` : "",
   ].filter(Boolean).join("");
 
   const fullAddress = [restaurant.address, restaurant.city, restaurant.state, restaurant.zip].filter(Boolean).join(", ");
@@ -56,31 +82,75 @@ export function renderRestaurantSite(restaurant) {
     .map((category) => {
       const items = (category.items || [])
         .map(
-          (item) => `
-            <article class="menu-item group">
-              <div class="menu-head">
-                <h4>${safe(item.name)}</h4>
-                <div class="menu-dots"></div>
-                <span class="price">${safe(item.price)}</span>
-              </div>
-              <p>${safe(item.description)}</p>
-            </article>
-          `
+          (item) => {
+            if (restaurant.menuFormat === "visual") {
+              return `
+                <article class="card p-0" style="padding: 0; display: flex; flex-direction: column; height: 100%;">
+                  ${item.photoUrl ? `<div style="height: 200px; width: 100%; border-bottom: 1px solid var(--border); background: url('${safe(item.photoUrl)}') center/cover;"></div>` : `<div style="height: 120px; width: 100%; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--primary) 10%, var(--surface)); display:flex; align-items:center; justify-content:center;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--primary); opacity:0.5;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></div>`}
+                  <div style="padding: 1.5rem; flex-grow: 1;">
+                    <div style="display:flex; justify-content:space-between; align-items:start; gap: 1rem; margin-bottom: 0.5rem;">
+                      <h4 style="font-size: 1.25rem; font-family:${headingFont}">${safe(item.name)}</h4>
+                      <span style="font-weight: 700; color: var(--primary); font-size: 1.1rem; flex-shrink: 0;">${safe(item.price)}</span>
+                    </div>
+                    ${item.badge ? `<span class="pill" style="padding: 0.2rem 0.6rem; font-size: 0.7rem; margin-bottom: 0.5rem; border: none; box-shadow: none; background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary);">${safe(item.badge)}</span>` : ""}
+                    <p style="font-size: 0.95rem; margin-top: 0.5rem;">${safe(item.description)}</p>
+                  </div>
+                </article>
+              `;
+            } else if (restaurant.menuFormat === "fine") {
+              return `
+                <article class="menu-item-fine" style="display:flex; align-items:baseline; margin-bottom: 1rem; width:100%;">
+                  <h4 style="margin: 0; font-family:${headingFont}; font-size: 1.15rem;">${safe(item.name)} ${item.badge ? `<span style="font-size: 0.75rem; vertical-align: super; color: var(--primary); font-style: italic; font-weight: normal; margin-left: 0.25rem;">${safe(item.badge)}</span>` : ""}</h4>
+                  <div style="flex-grow: 1; border-bottom: 2px dotted color-mix(in srgb, var(--text) 20%, transparent); margin: 0 1rem;"></div>
+                  <span style="font-weight: 600; font-size: 1.15rem;">${safe(item.price)}</span>
+                </article>
+              `;
+            } else {
+              return `
+                <article class="menu-item group" style="margin-bottom: 2rem;">
+                  <div class="menu-head" style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom: 0.5rem;">
+                    <h4 style="font-size: 1.2rem; font-family:${headingFont}">${safe(item.name)} ${item.badge ? `<span class="menu-badge" style="background:var(--primary); color:white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">${safe(item.badge)}</span>` : ""}</h4>
+                    <span class="price" style="font-weight: 700; color: var(--primary); font-size: 1.1rem;">${safe(item.price)}</span>
+                  </div>
+                  <p style="margin: 0; font-size: 0.95rem;">${safe(item.description)}</p>
+                </article>
+              `;
+            }
+          }
         ).join("");
-      return `<section class="menu-category" id="menu-${safe(category.id)}"><h3 class="category-heading">${safe(category.name)}</h3><div class="menu-grid">${items || "<p>No items yet.</p>"}</div></section>`;
+
+      const gridCss = restaurant.menuFormat === "visual" ? `display: grid; gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));` : `display: grid; gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));`;
+      
+      return `<section class="menu-category" id="menu-${safe(category.id)}" style="margin-bottom: 4rem;">
+                <h3 class="category-heading" style="text-align: center; margin-bottom: 2.5rem; font-size: 2.5rem; font-family:${headingFont}">${safe(category.name)}</h3>
+                <div style="${gridCss}">${items || "<p style='text-align:center;'>No items yet.</p>"}</div>
+              </section>`;
     }).join("");
 
   const galleryImages = restaurant.gallery || [];
-  const galleryHtml = galleryImages
-    .slice(0, 8)
-    .map((url, idx) => `<img class="gallery-img" src="${safe(url)}" alt="${safe(restaurant.name)} photo ${idx + 1}" loading="lazy" onclick="openFullGallery()" />`)
-    .join("");
+  
+  let galleryHtml = "";
+  if (restaurant.galleryFormat === "carousel") {
+    // Horizontal Flex Slider
+    galleryHtml = `
+      <div style="display:flex; overflow-x:auto; gap:1.5rem; scroll-snap-type: x mandatory; padding-bottom:1.5rem; padding-top:1rem; scrollbar-width:thin;">
+        ${galleryImages.map((url, idx) => `<img src="${safe(url)}" alt="${safe(restaurant.name)} photo ${idx + 1}" loading="lazy" onclick="openFullGallery()" style="height:320px; width:min(80vw, 400px); border-radius:calc(var(--radius-card)*0.5); scroll-snap-align: center; flex-shrink:0; object-fit:cover; cursor:pointer;" />`).join("")}
+      </div>
+    `;
+  } else {
+    // Standard Grid
+    galleryHtml = `
+      <div class="gallery-grid" id="main-gallery-grid">
+        ${galleryImages.slice(0, 8).map((url, idx) => `<img class="gallery-img" src="${safe(url)}" alt="${safe(restaurant.name)} photo ${idx + 1}" loading="lazy" onclick="openFullGallery()" />`).join("")}
+      </div>
+    `;
+  }
   
   const allGalleryHtml = galleryImages
     .map((url, idx) => `<img class="full-gallery-img" src="${safe(url)}" alt="${safe(restaurant.name)} photo ${idx + 1}" loading="lazy" />`)
     .join("");
 
-  const hasMoreGallery = galleryImages.length > 8;
+  const hasMoreGallery = restaurant.galleryFormat !== "carousel" && galleryImages.length > 8;
 
   const social = [
     restaurant.instagramUrl ? `<a href="${safe(restaurant.instagramUrl)}" target="_blank" rel="noreferrer">Instagram</a>` : "",
@@ -100,7 +170,11 @@ export function renderRestaurantSite(restaurant) {
   const heroIsSplit = restaurant.heroStyle === "split";
 
   let heroHtml = "";
+  let heroJs = "";
   if (heroIsSplit) {
+    let imgBlock = `<div style="width:100%;height:100%;min-height:40vh;background:var(--primary);opacity:0.2;"></div>`;
+    if (hasGallery) imgBlock = `<img id="hero-img-el" src="${safe(restaurant.gallery[0])}" class="hero-split-img" alt="Hero" style="transition: opacity 0.5s ease-in-out;" />`;
+    
     heroHtml = `
       <header class="hero-split">
         <div class="hero-split-content">
@@ -109,18 +183,33 @@ export function renderRestaurantSite(restaurant) {
           <p style="color:var(--muted); text-shadow:none;">${safe(restaurant.heroSubtitle || "")}</p>
           <div class="cta-row">${serviceLinks || `<a class="btn btn-primary" href="#menu">Explore Menu</a>`}</div>
         </div>
-        ${hasGallery 
-          ? `<img src="${safe(restaurant.gallery[0])}" class="hero-split-img" alt="Hero" />`
-          : `<div style="width:100%;height:100%;min-height:40vh;background:var(--primary);opacity:0.2;"></div>`
-        }
+        ${imgBlock}
       </header>
     `;
+    
+    if (hasGallery && restaurant.heroBackground === "carousel" && galleryImages.length > 1) {
+      heroJs = `
+        <script>
+          const heroImages = ${JSON.stringify(galleryImages)};
+          let heroImgIdx = 0;
+          setInterval(() => {
+            heroImgIdx = (heroImgIdx + 1) % heroImages.length;
+            const el = document.getElementById('hero-img-el');
+            if(el){
+               el.style.opacity = 0.5;
+               setTimeout(() => { el.src = heroImages[heroImgIdx]; el.style.opacity = 1; }, 500);
+            }
+          }, 4000);
+        </script>
+      `;
+    }
   } else {
-    const heroImageCss = hasGallery
-      ? `background-image: linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.85)), url('${safe(restaurant.gallery[0])}'); background-size: cover; background-position: center; background-attachment: fixed;`
+    const defaultImageCss = hasGallery
+      ? `background-image: linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.85)), url('${safe(restaurant.gallery[0])}'); background-size: cover; background-position: center; background-attachment: fixed; transition: background-image 1s ease-in-out;`
       : `background: linear-gradient(145deg, color-mix(in srgb, var(--primary) 20%, #111827), color-mix(in srgb, var(--accent) 15%, #111827));`;
+      
     heroHtml = `
-      <header class="hero" style="${heroImageCss}">
+      <header id="hero-bg" class="hero" style="${defaultImageCss}">
         <div class="container hero-content">
           <span class="pill">${safe(restaurant.cuisine || "Restaurant")}</span>
           <h1>${safe(restaurant.heroTitle || restaurant.name)}</h1>
@@ -129,6 +218,20 @@ export function renderRestaurantSite(restaurant) {
         </div>
       </header>
     `;
+    
+    if (hasGallery && restaurant.heroBackground === "carousel" && galleryImages.length > 1) {
+      heroJs = `
+        <script>
+          const heroImages = ${JSON.stringify(galleryImages)};
+          let heroImgIdx = 0;
+          setInterval(() => {
+            heroImgIdx = (heroImgIdx + 1) % heroImages.length;
+            const el = document.getElementById('hero-bg');
+            if(el) el.style.backgroundImage = 'linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.85)), url(' + heroImages[heroImgIdx] + ')';
+          }, 4000);
+        </script>
+      `;
+    }
   }
 
   const sectionHtml = {
@@ -149,7 +252,10 @@ export function renderRestaurantSite(restaurant) {
           phoneHtml: phoneHtml,
           emailHtml: emailHtml,
           mapUrl: mapIframeUrl
-        }, ...(Array.isArray(restaurant.extraLocations) ? restaurant.extraLocations : []) ].map((loc, idx) => `
+        }, ...(Array.isArray(restaurant.extraLocations) ? restaurant.extraLocations : []) ].map((loc, idx) => {
+          const lPhone = loc.phoneHtml !== undefined ? loc.phoneHtml : (loc.phone ? `<p style="margin-bottom:0.5rem; display:flex; align-items:center; gap:0.5rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg> <a href="tel:${safe(loc.phone)}" style="color:var(--text); text-decoration:none; font-weight:600;">${safe(loc.phone)}</a></p>` : "");
+          const lEmail = loc.emailHtml !== undefined ? loc.emailHtml : (loc.contactEmail ? `<p style="margin-bottom:0.5rem; display:flex; align-items:center; gap:0.5rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg> <a href="mailto:${safe(loc.contactEmail)}" style="color:var(--text); text-decoration:none; font-weight:600;">${safe(loc.contactEmail)}</a></p>` : "");
+          return `
         <div class="grid-two pt-0" style="margin-bottom: ${idx === 0 ? '0' : '4rem'};">
           <article class="card">
             <h3>${safe(loc.name || "Location")}</h3>
@@ -170,11 +276,11 @@ export function renderRestaurantSite(restaurant) {
               `<p class="text-sm">Check our online ordering page or call us for current hours.</p>`
             }
             <h3 style="margin-top: 2rem;">Contact</h3>
-            ${idx === 0 ? phoneHtml + emailHtml : ""}
-            ${!phoneHtml && !emailHtml && idx === 0 ? `<p>Contact information is currently unavailable online.</p>` : ""}
+            ${lPhone + lEmail}
+            ${!lPhone && !lEmail ? `<p>Contact information is currently unavailable online.</p>` : ""}
           </article>
         </div>
-        `).join("")}
+        `}).join("")}
       </section>
     `,
     menu: `
@@ -186,15 +292,50 @@ export function renderRestaurantSite(restaurant) {
     gallery: galleryImages.length > 0 ? `
       <section id="gallery">
         <h2>Gallery</h2>
-        <div class="gallery-grid" id="main-gallery-grid">${galleryHtml}</div>
+        ${galleryHtml}
         ${hasMoreGallery ? `<div class="view-all-gallery"><button class="btn btn-secondary" onclick="openFullGallery()">View All ${galleryImages.length} Photos</button></div>` : ""}
+
+      </section>
+    ` : "",
+    specials: restaurant.specials && restaurant.specials.length > 0 ? `
+      <section id="specials">
+        <h2>Specials & Events</h2>
+        <div class="grid-two pt-0">
+          ${restaurant.specials.map(s => `
+            <article class="card special-card" style="padding: 0; display: flex; flex-direction: column;">
+              ${s.image ? `<img src="${safe(s.image)}" alt="${safe(s.title)}" style="width: 100%; height: 200px; object-fit: cover;" />` : ''}
+              <div style="padding: 2.5rem; flex-grow: 1;">
+                ${s.badge ? `<span class="pill" style="color:var(--primary); border-color:var(--primary); background:color-mix(in srgb, var(--primary) 10%, transparent); margin-bottom: 1rem; box-shadow: none;">${safe(s.badge)}</span>` : ''}
+                <h3 style="margin-bottom: 0.5rem;">${safe(s.title)}</h3>
+                <p style="margin-bottom: 0;">${safe(s.description)}</p>
+              </div>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+    ` : "",
+    testimonials: restaurant.testimonials && restaurant.testimonials.length > 0 ? `
+      <section id="testimonials">
+        <h2>Customer Reviews</h2>
+        <div class="grid-two pt-0">
+          ${restaurant.testimonials.map(t => `
+            <article class="card testimonial-card" style="display: flex; flex-direction: column; justify-content: center; text-align: center; padding: 3rem 2rem;">
+              <div style="color: var(--primary); font-size: 3rem; line-height: 1; margin-bottom: 1rem; opacity: 0.5;">"</div>
+              <p style="font-size: 1.15rem; font-style: italic; color: var(--text); margin-bottom: 1.5rem; flex-grow: 1;">${safe(t.quote)}</p>
+              <h4 style="color: var(--muted); text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.1em;">&mdash; ${safe(t.author)}</h4>
+            </article>
+          `).join("")}
+        </div>
       </section>
     ` : ""
   };
 
-  const activeOrder = Array.isArray(restaurant.sectionOrder) && restaurant.sectionOrder.length > 0 
-    ? restaurant.sectionOrder 
-    : ["story", "location", "menu", "gallery"];
+  const activeOrder = (() => {
+    const baseOrder = ["story", "location", "specials", "menu", "testimonials", "gallery"];
+    let order = Array.isArray(restaurant.sectionOrder) && restaurant.sectionOrder.length > 0 ? restaurant.sectionOrder : baseOrder;
+    const missing = baseOrder.filter(sec => !order.includes(sec));
+    return [...order, ...missing];
+  })();
 
   const renderedSections = activeOrder.map(key => sectionHtml[key] || "").join("");
 
@@ -228,6 +369,7 @@ export function renderRestaurantSite(restaurant) {
         margin: 0; 
         font-family: ${template}; 
         background-color: var(--bg); 
+        ${patternCss}
         color: var(--text); 
         -webkit-font-smoothing: antialiased;
       }
@@ -256,7 +398,7 @@ export function renderRestaurantSite(restaurant) {
       .nav-btn-secondary { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); }
       
       /* Announcement */
-      .announce { background: var(--accent); color: white; padding: 0.6rem 0; font-size: 0.9rem; text-align: center; font-weight: 600; }
+      .announce { background: var(--accent); color: white; padding: 0.6rem 0; font-size: 0.9rem; text-align: center; font-weight: 600; display: none; }
 
       /* Hero Overlay */
       .hero { 
@@ -298,19 +440,20 @@ export function renderRestaurantSite(restaurant) {
         transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s; display: inline-flex; align-items: center; 
       }
       .btn:hover { transform: translateY(-4px) scale(1.02); }
-      .btn-primary { background: var(--primary); color: white; box-shadow: 0 8px 25px color-mix(in srgb, var(--primary) 40%, transparent); } 
-      .btn-primary:hover { box-shadow: 0 12px 30px color-mix(in srgb, var(--primary) 60%, transparent); }
+      ${buttonCss}
       .btn-secondary { background: var(--surface-alt); color: var(--text); box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); }
       
       /* Layout Grids */
       .grid-two { display: grid; gap: 3rem; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); align-items: start; }
       .card { 
         border-radius: var(--radius-card); background: var(--surface); padding: 2.5rem;
-        box-shadow: 0 20px 40px -10px var(--shadow), 0 1px 3px var(--shadow);
+        ${shadowCss}
         border: 1px solid var(--border); position: relative; overflow: hidden;
       }
       .card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, var(--primary), var(--accent)); }
       .contact-link { color: var(--primary); text-decoration: none; font-weight: 600; display: inline-block; transition: color 0.2s; }
+      
+      ${animCss}
       .contact-link:hover { color: var(--accent); }
       
       /* Menu layout */
@@ -325,7 +468,8 @@ export function renderRestaurantSite(restaurant) {
         transform: translateY(-5px); box-shadow: 0 15px 30px var(--shadow); border-color: var(--primary); 
       }
       .menu-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; margin-bottom: 0.75rem; } 
-      .menu-head h4 { font-size: 1.15rem; font-weight: 700; margin: 0; white-space: nowrap; color: var(--text); }
+      .menu-head h4 { display: flex; align-items: center; gap: 0.75rem; font-size: 1.15rem; font-weight: 700; margin: 0; white-space: nowrap; color: var(--text); }
+      .menu-badge { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary); padding: 0.25rem 0.6rem; border-radius: var(--radius-btn); font-weight: 800; border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent); box-shadow: 0 2px 4px color-mix(in srgb, var(--primary) 10%, transparent); }
       .menu-dots { flex-grow: 1; border-bottom: 2px dotted var(--border); margin-bottom: 0.35rem; opacity: 0.6; }
       .price { color: var(--accent); font-weight: 800; font-size: 1.2rem; white-space: nowrap; }
       .menu-item p { margin: 0; font-size: 0.95rem; color: var(--muted); }
@@ -365,14 +509,31 @@ export function renderRestaurantSite(restaurant) {
       footer strong { font-family: ${headingFont}; font-size: 1.5rem; display: block; margin-bottom: 1rem; color: white; }
       footer a:hover { color: white; }
       .footer-social { margin-top: 2rem; display: flex; gap: 1.5rem; }
+      
+      /* Utilities */
+      .promo-banner { background: var(--primary); color: white; padding: 0.75rem; text-align: center; font-weight: 700; font-size: 0.95rem; display: block; text-decoration: none; position: relative; z-index: 100; }
+      .promo-banner:hover { background: color-mix(in srgb, var(--primary) 80%, black); }
+      .floating-cta { position: fixed; bottom: 2rem; right: 2rem; z-index: 999; background: var(--primary); color: white; border-radius: var(--radius-btn); padding: 1rem 2rem; font-weight: 800; text-decoration: none; box-shadow: 0 10px 25px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 0.5rem; animation: bounce 2s infinite; }
+      @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
     </style>
+    <script>
+      window.__track = function(action, label) {
+        fetch('/api/telemetry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rstId: '${safe(restaurant.id)}', action: action, label: label })
+        }).catch(e => console.error(e));
+      };
+    </script>
   </head>
   <body>
-    ${restaurant.announcementEnabled && restaurant.announcementText ? `<div class="announce">${safe(restaurant.announcementText)}</div>` : ""}
+    ${restaurant.promoBanner?.enabled ? `<${restaurant.promoBanner?.link ? `a href="${safe(restaurant.promoBanner.link)}" target="_blank" rel="noreferrer"` : "div"} class="promo-banner" onclick="window.__track?.('click', 'promo_banner')">${safe(restaurant.promoBanner.text)}</${restaurant.promoBanner?.link ? "a" : "div"}>` : ""}
     
     <nav class="navbar">
       <div class="container">
-        <a href="#" class="navbar-brand">${safe(restaurant.name)}</a>
+        <a href="#" class="navbar-brand">
+          ${restaurant.logoUrl ? `<img src="${safe(restaurant.logoUrl)}" alt="${safe(restaurant.name)} Logo" style="max-height: 48px; display: block;" />` : safe(restaurant.name)}
+        </a>
         <div class="nav-links">
           ${headerServiceLinks || `<a href="#menu" class="nav-btn nav-btn-primary">Menu</a>`}
         </div>
@@ -387,7 +548,7 @@ export function renderRestaurantSite(restaurant) {
 
     <footer>
       <div class="container flex-footer">
-        <strong>${safe(restaurant.name)}</strong>
+        <strong>${restaurant.logoUrl ? `<img src="${safe(restaurant.logoUrl)}" alt="${safe(restaurant.name)} Logo" style="max-height: 48px; display: block; margin-bottom: 1rem;" />` : safe(restaurant.name)}</strong>
         <p>Published with Plateform Builder ${restaurant.customDomain ? `&bull; ${safe(restaurant.customDomain)}` : ""}</p>
         ${social ? `<div class="footer-social">${social}</div>` : ""}
       </div>
@@ -427,6 +588,9 @@ export function renderRestaurantSite(restaurant) {
       });
     </script>
     ` : ""}
+    
+    ${restaurant.floatingCTA?.enabled ? `<a href="${safe(restaurant.floatingCTA.link)}" target="_blank" rel="noreferrer" class="floating-cta" onclick="window.__track?.('click', 'floating_cta')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg> ${safe(restaurant.floatingCTA.text)}</a>` : ""}
+    ${heroJs}
   </body>
 </html>`;
 }

@@ -15,6 +15,11 @@ const dbFile = path.join(dataDir, "db.json");
 const PORT = process.env.PORT || 8787;
 const allowedOrigin = process.env.CORS_ORIGIN || "http://localhost:5173";
 
+const rateLimitWindowMs = 60000; // 1 min fixed window
+const rateLimitMax = 200; // 200 requests per IP per minute
+const ipRequests = new Map();
+setInterval(() => ipRequests.clear(), rateLimitWindowMs);
+
 const defaultDb = {
   users: [],
   sessions: [],
@@ -123,17 +128,37 @@ function sanitizeRestaurantInput(payload = {}) {
               name: String(item.name || "").trim(),
               description: String(item.description || "").trim(),
               price: String(item.price || "").trim(),
+              badge: String(item.badge || "").trim(),
             }))
           : [],
       }))
     : [];
 
   const gallery = Array.isArray(payload.gallery)
-    ? payload.gallery.map((url) => String(url || "").trim()).filter(Boolean)
+    ? payload.gallery.map((url) => String(url || "").trim()).filter(Boolean).slice(0, 20)
+    : [];
+
+  const specials = Array.isArray(payload.specials)
+    ? payload.specials.map((s) => ({
+        id: s.id || makeId("spc"),
+        title: String(s.title || "").trim(),
+        description: String(s.description || "").trim(),
+        badge: String(s.badge || "").trim(),
+        image: String(s.image || "").trim(),
+      }))
+    : [];
+
+  const testimonials = Array.isArray(payload.testimonials)
+    ? payload.testimonials.map((t) => ({
+        id: t.id || makeId("tst"),
+        quote: String(t.quote || "").trim(),
+        author: String(t.author || "").trim(),
+      }))
     : [];
 
   return {
     name: String(payload.name || "").trim(),
+    logoUrl: String(payload.logoUrl || "").trim(),
     cuisine: String(payload.cuisine || "").trim(),
     phone: String(payload.phone || "").trim(),
     contactEmail: String(payload.contactEmail || "").trim(),
@@ -165,11 +190,26 @@ function sanitizeRestaurantInput(payload = {}) {
     fontStyle: String(payload.fontStyle || "sans").trim(),
     themeMode: String(payload.themeMode || "light").trim(),
     heroStyle: String(payload.heroStyle || "overlay").trim(),
+    buttonStyle: String(payload.buttonStyle || "solid").trim(),
+    backgroundPattern: String(payload.backgroundPattern || "solid").trim(),
+    cardShadow: String(payload.cardShadow || "soft").trim(),
+    animationStyle: String(payload.animationStyle || "smooth").trim(),
+    heroBackground: String(payload.heroBackground || "static").trim(),
+    menuFormat: String(payload.menuFormat || "classic").trim(),
+    galleryFormat: String(payload.galleryFormat || "grid").trim(),
+    promoBanner: typeof payload.promoBanner === 'object' && payload.promoBanner !== null ? {
+      enabled: Boolean(payload.promoBanner.enabled),
+      text: String(payload.promoBanner.text || "").trim(),
+      link: String(payload.promoBanner.link || "").trim()
+    } : { enabled: false, text: "", link: "" },
+    floatingCTA: typeof payload.floatingCTA === 'object' && payload.floatingCTA !== null ? {
+      enabled: Boolean(payload.floatingCTA.enabled),
+      text: String(payload.floatingCTA.text || "").trim(),
+      link: String(payload.floatingCTA.link || "").trim()
+    } : { enabled: false, text: "", link: "" },
     seoTitle: String(payload.seoTitle || "").trim(),
     seoDescription: String(payload.seoDescription || "").trim(),
     customDomain: String(payload.customDomain || "").trim(),
-    announcementEnabled: Boolean(payload.announcementEnabled),
-    announcementText: String(payload.announcementText || "").trim(),
     instagramUrl: String(payload.instagramUrl || "").trim(),
     facebookUrl: String(payload.facebookUrl || "").trim(),
     tiktokUrl: String(payload.tiktokUrl || "").trim(),
@@ -177,15 +217,33 @@ function sanitizeRestaurantInput(payload = {}) {
     showEmail: payload.showEmail !== undefined ? Boolean(payload.showEmail) : true,
     showStory: payload.showStory !== undefined ? Boolean(payload.showStory) : true,
     isOffline: Boolean(payload.isOffline),
-    sectionOrder: Array.isArray(payload.sectionOrder) ? payload.sectionOrder.map(String) : ["story", "location", "menu", "gallery"],
+    sectionOrder: (() => {
+      const baseOrder = ["story", "location", "specials", "menu", "testimonials", "gallery"];
+      let order = Array.isArray(payload.sectionOrder) && payload.sectionOrder.length > 0 ? payload.sectionOrder.map(String) : baseOrder;
+      const missing = baseOrder.filter(sec => !order.includes(sec));
+      return [...order, ...missing];
+    })(),
     extraLocations: Array.isArray(payload.extraLocations) ? payload.extraLocations.map(l => ({
       name: String(l.name || "").trim(),
       address: String(l.address || "").trim(),
       city: String(l.city || "").trim(),
-      state: String(l.state || "").trim()
+      state: String(l.state || "").trim(),
+      phone: String(l.phone || "").trim(),
+      contactEmail: String(l.contactEmail || "").trim(),
+      hours: typeof l.hours === "object" && l.hours !== null ? {
+        Monday: String(l.hours.Monday || "").trim(),
+        Tuesday: String(l.hours.Tuesday || "").trim(),
+        Wednesday: String(l.hours.Wednesday || "").trim(),
+        Thursday: String(l.hours.Thursday || "").trim(),
+        Friday: String(l.hours.Friday || "").trim(),
+        Saturday: String(l.hours.Saturday || "").trim(),
+        Sunday: String(l.hours.Sunday || "").trim(),
+      } : { Monday: "", Tuesday: "", Wednesday: "", Thursday: "", Friday: "", Saturday: "", Sunday: "" }
     })) : [],
     menuCategories,
     gallery,
+    specials,
+    testimonials,
   };
 }
 
@@ -201,6 +259,13 @@ function getUserFromAuth(req, db) {
 }
 
 async function handle(req, res) {
+  const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
+  const count = (ipRequests.get(ip) || 0) + 1;
+  ipRequests.set(ip, count);
+  if (count > rateLimitMax) {
+    return json(res, 429, { error: "Too many requests. Please try again later." });
+  }
+
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
       "Access-Control-Allow-Origin": allowedOrigin,
@@ -386,10 +451,29 @@ async function handle(req, res) {
     try {
       const body = await parseBody(req);
       const data = sanitizeRestaurantInput(body);
-      const html = renderRestaurantSite({ ...data, name: data.name || "Preview Simulator" });
+      const html = renderRestaurantSite({ ...data, id: body.id, name: data.name || "Preview Simulator" });
       return json(res, 200, { html });
     } catch (error) {
       return json(res, 400, { error: error.message });
+    }
+  }
+
+  if (req.method === "POST" && pathname === "/api/telemetry") {
+    try {
+      const body = await parseBody(req);
+      const { rstId, action, label } = body;
+      if (!rstId || !action || !label) return json(res, 400, { error: "Missing telemetry params" });
+      
+      const restaurant = db.restaurants.find(r => r.id === rstId);
+      if (restaurant) {
+        if (!restaurant.analytics) restaurant.analytics = {};
+        if (!restaurant.analytics[action]) restaurant.analytics[action] = {};
+        restaurant.analytics[action][label] = (restaurant.analytics[action][label] || 0) + 1;
+        writeDb(db).catch(error => console.error("Failed to update telemetry:", error));
+      }
+      return json(res, 200, { success: true });
+    } catch {
+      return json(res, 400, { error: "Invalid telemetry" });
     }
   }
 
