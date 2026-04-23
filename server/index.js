@@ -216,7 +216,25 @@ function sanitizeRestaurantInput(payload = {}) {
     showPhone: payload.showPhone !== undefined ? Boolean(payload.showPhone) : true,
     showEmail: payload.showEmail !== undefined ? Boolean(payload.showEmail) : true,
     showStory: payload.showStory !== undefined ? Boolean(payload.showStory) : true,
+    showLocationSection: payload.showLocationSection !== undefined ? Boolean(payload.showLocationSection) : true,
+    showGallerySection: payload.showGallerySection !== undefined ? Boolean(payload.showGallerySection) : true,
     isOffline: Boolean(payload.isOffline),
+    navbar: typeof payload.navbar === 'object' && payload.navbar !== null ? {
+      showNavbar: payload.navbar.showNavbar !== undefined ? Boolean(payload.navbar.showNavbar) : true,
+      logoText: String(payload.navbar.logoText || "").trim(),
+      position: String(payload.navbar.position || "sticky").trim(),
+      style: String(payload.navbar.style || "solid").trim(),
+      links: Array.isArray(payload.navbar.links) ? payload.navbar.links.map(l => ({
+        id: String(l.id || "").trim(),
+        label: String(l.label || "").trim(),
+        url: String(l.url || "").trim()
+      })) : [],
+      ctaButton: typeof payload.navbar.ctaButton === 'object' && payload.navbar.ctaButton !== null ? {
+        enabled: Boolean(payload.navbar.ctaButton.enabled),
+        text: String(payload.navbar.ctaButton.text || "").trim(),
+        link: String(payload.navbar.ctaButton.link || "").trim()
+      } : { enabled: false, text: "", link: "" }
+    } : { showNavbar: true, logoText: "", position: "sticky", style: "solid", links: [], ctaButton: { enabled: false, text: "", link: "" } },
     sectionOrder: (() => {
       const baseOrder = ["story", "location", "specials", "menu", "testimonials", "gallery"];
       let order = Array.isArray(payload.sectionOrder) && payload.sectionOrder.length > 0 ? payload.sectionOrder.map(String) : baseOrder;

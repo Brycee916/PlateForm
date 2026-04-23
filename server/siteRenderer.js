@@ -75,6 +75,28 @@ export function renderRestaurantSite(restaurant) {
     restaurant.orderUrl ? `<a class="nav-btn nav-btn-secondary" href="${safe(restaurant.orderUrl)}" target="_blank" rel="noreferrer" onclick="window.__track?.('click', 'order')">Order</a>` : "",
   ].filter(Boolean).join("");
 
+  let headerLinksHtml = "";
+  if (restaurant.navbar?.links && restaurant.navbar.links.length > 0) {
+    headerLinksHtml = restaurant.navbar.links.map(link => `<a href="${safe(link.url)}" style="color:var(--text); font-weight:600; text-decoration:none; margin-right:1rem; font-size:0.95rem;">${safe(link.label)}</a>`).join("");
+  }
+  
+  if (restaurant.navbar?.ctaButton?.enabled) {
+    headerLinksHtml += `<a href="${safe(restaurant.navbar.ctaButton.link)}" class="nav-btn nav-btn-primary" target="_blank" rel="noreferrer">${safe(restaurant.navbar.ctaButton.text)}</a>`;
+  } else if (!headerLinksHtml && !headerServiceLinks) {
+    headerLinksHtml = `<a href="#menu" class="nav-btn nav-btn-primary">Menu</a>`;
+  } else {
+    headerLinksHtml += headerServiceLinks;
+  }
+
+  const rawNavPos = restaurant.navbar?.position || 'sticky';
+  const navPos = rawNavPos === 'static' && restaurant.navbar?.style === 'transparent' ? 'absolute' : rawNavPos === 'static' ? 'relative' : rawNavPos;
+  let navStyleCss = '';
+  if (restaurant.navbar?.style === 'transparent') {
+    navStyleCss = `background: transparent; border: none; backdrop-filter: none; -webkit-backdrop-filter: none;`;
+  } else {
+    navStyleCss = `background: color-mix(in srgb, var(--surface) 85%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border);`;
+  }
+
   const fullAddress = [restaurant.address, restaurant.city, restaurant.state, restaurant.zip].filter(Boolean).join(", ");
   const mapIframeUrl = fullAddress ? `https://maps.google.com/maps?q=${encodeURIComponent(fullAddress)}&t=&z=14&ie=UTF8&iwloc=&output=embed` : "";
 
@@ -375,12 +397,12 @@ export function renderRestaurantSite(restaurant) {
       }
       .container { width: min(1120px, 92vw); margin: 0 auto; }
       
-      /* Navbar */
+      /* Header */
+      .site-header {
+        position: ${navPos}; top: 0; z-index: 50; width: 100%;
+      }
       .navbar { 
-        position: sticky; top: 0; z-index: 50; 
-        background: color-mix(in srgb, var(--surface) 85%, transparent);
-        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-        border-bottom: 1px solid var(--border);
+        ${navStyleCss}
         transition: all 0.3s ease;
       }
       .navbar .container { 
@@ -524,21 +546,43 @@ export function renderRestaurantSite(restaurant) {
           body: JSON.stringify({ rstId: '${safe(restaurant.id)}', action: action, label: label })
         }).catch(e => console.error(e));
       };
+
+      document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('click', function(e) {
+          const a = e.target.closest('a');
+          if (a && a.getAttribute('href') && a.getAttribute('href').startsWith('#')) {
+            e.preventDefault();
+            const targetId = a.getAttribute('href').substring(1);
+            if (!targetId) {
+              window.scrollTo({top: 0, behavior: 'smooth'});
+              return;
+            }
+            const el = document.getElementById(targetId);
+            if (el) {
+              el.scrollIntoView({behavior: 'smooth'});
+            }
+          }
+        });
+      });
     </script>
   </head>
   <body>
-    ${restaurant.promoBanner?.enabled ? `<${restaurant.promoBanner?.link ? `a href="${safe(restaurant.promoBanner.link)}" target="_blank" rel="noreferrer"` : "div"} class="promo-banner" onclick="window.__track?.('click', 'promo_banner')">${safe(restaurant.promoBanner.text)}</${restaurant.promoBanner?.link ? "a" : "div"}>` : ""}
-    
-    <nav class="navbar">
-      <div class="container">
-        <a href="#" class="navbar-brand">
-          ${restaurant.logoUrl ? `<img src="${safe(restaurant.logoUrl)}" alt="${safe(restaurant.name)} Logo" style="max-height: 48px; display: block;" />` : safe(restaurant.name)}
-        </a>
-        <div class="nav-links">
-          ${headerServiceLinks || `<a href="#menu" class="nav-btn nav-btn-primary">Menu</a>`}
+    <header class="site-header">
+      ${restaurant.promoBanner?.enabled ? `<${restaurant.promoBanner?.link ? `a href="${safe(restaurant.promoBanner.link)}" target="_blank" rel="noreferrer"` : "div"} class="promo-banner" onclick="window.__track?.('click', 'promo_banner')">${safe(restaurant.promoBanner.text)}</${restaurant.promoBanner?.link ? "a" : "div"}>` : ""}
+      
+      ${restaurant.navbar?.showNavbar !== false ? `
+      <nav class="navbar">
+        <div class="container">
+          <a href="#" class="navbar-brand" onclick="window.scrollTo(0,0); return false;">
+            ${restaurant.logoUrl ? `<img src="${safe(restaurant.logoUrl)}" alt="${safe(restaurant.name)} Logo" style="max-height: 48px; display: block;" />` : safe(restaurant.navbar?.logoText || restaurant.name)}
+          </a>
+          <div class="nav-links">
+            ${headerLinksHtml}
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+      ` : ""}
+    </header>
 
     ${heroHtml}
 

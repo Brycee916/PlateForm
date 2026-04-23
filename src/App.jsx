@@ -52,7 +52,20 @@ const baseRestaurant = () => ({
   specials: [],
   testimonials: [],
   sectionOrder: ["story", "location", "specials", "menu", "testimonials", "gallery"],
-  extraLocations: []
+  extraLocations: [],
+  navbar: {
+    showNavbar: true,
+    logoText: "",
+    position: "sticky",
+    style: "solid",
+    links: [
+      { id: crypto.randomUUID(), label: "Menu", url: "#menu" },
+      { id: crypto.randomUUID(), label: "Location", url: "#location" }
+    ],
+    ctaButton: { text: "", link: "", enabled: false }
+  },
+  showLocationSection: true,
+  showGallerySection: true
 });
 
 const normalizeRestaurant = (r) => {
@@ -70,7 +83,8 @@ const normalizeRestaurant = (r) => {
     sectionOrder: order,
     extraLocations: Array.isArray(r?.extraLocations) ? r.extraLocations : [],
     specials: r?.specials || [],
-    testimonials: r?.testimonials || []
+    testimonials: r?.testimonials || [],
+    navbar: { ...baseRestaurant().navbar, ...(r?.navbar || {}) }
   };
 };
 
@@ -514,7 +528,29 @@ function _ThemeGallery({ current, onSelect }) {
   );
 }
 
+function _NavbarLinksBuilder({ value, onChange }) {
+  const add = () => onChange([...value, { id: crypto.randomUUID(), label: "New Link", url: "#" }]);
+  const remove = (idx) => onChange(value.filter((_, i) => i !== idx));
+  const update = (idx, field, val) => { const next = [...value]; next[idx][field] = val; onChange(next); };
+  
+  return (
+    <div className="space-y-3 mt-4 border-t border-slate-200 pt-4">
+      <h3 className="text-sm font-semibold text-slate-700">Navigation Links</h3>
+      <p className="text-xs text-slate-500">Use section IDs (e.g., #menu, #story, #location, #gallery) to scroll to sections.</p>
+      {value.map((link, idx) => (
+        <div key={link.id} className="flex items-center gap-2">
+          <input value={link.label} onChange={(e) => update(idx, 'label', e.target.value)} placeholder="Label (e.g. Menu)" className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:border-orange-500 focus:outline-none" />
+          <input value={link.url} onChange={(e) => update(idx, 'url', e.target.value)} placeholder="URL or #section" className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:border-orange-500 focus:outline-none" />
+          <button type="button" onClick={() => remove(idx)} className="text-slate-400 hover:text-red-500 px-2 font-bold text-lg">&times;</button>
+        </div>
+      ))}
+      <button type="button" onClick={add} className="text-xs rounded-lg border border-dashed border-slate-300 py-1.5 px-3 text-slate-600 hover:border-slate-500 hover:bg-slate-50 transition">+ Add Link</button>
+    </div>
+  );
+}
+
 const LayoutEditor = memo(_LayoutEditor);
+const NavbarLinksBuilder = memo(_NavbarLinksBuilder);
 const LocationsBuilder = memo(_LocationsBuilder);
 const HoursBuilder = memo(_HoursBuilder);
 const GalleryManager = memo(_GalleryManager);
@@ -685,6 +721,7 @@ function Dashboard({ token, user, restaurant, onUpdate, onLogout }) {
             <div className="bg-slate-50 border-b border-slate-200 px-6 py-2 flex gap-2 overflow-x-auto scrollbar-hide shadow-sm shrink-0">
               {[
                 {id: "sec-design", label: "Design"},
+                {id: "sec-navbar", label: "Navbar"},
                 {id: "sec-basis", label: "Basics"},
                 {id: "sec-actions", label: "Links"},
                 {id: "sec-marketing", label: "Marketing"},
@@ -805,6 +842,51 @@ function Dashboard({ token, user, restaurant, onUpdate, onLogout }) {
               </div>
             </section>
 
+            {/* Navbar Configuration */}
+            <section id="sec-navbar" className="scroll-mt-20">
+              <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400 mt-6 border-t border-slate-100 pt-6">Navbar Configuration</h2>
+              <div className="space-y-4 rounded-2xl bg-slate-50 p-5 border border-slate-100">
+                <label className="flex items-center gap-2 font-semibold text-slate-900 mb-2">
+                  <input type="checkbox" checked={!!draft.navbar?.showNavbar} onChange={(e) => getUpdater('navbar')({ ...draft.navbar, showNavbar: e.target.checked })} /> Enable Navbar
+                </label>
+                {draft.navbar?.showNavbar && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Field label="Logo Text (if no image)" value={draft.navbar?.logoText} onChange={(v) => getUpdater('navbar')({ ...draft.navbar, logoText: v })} />
+                      <label className="block text-sm font-medium text-slate-700">Navbar Position
+                        <select value={draft.navbar?.position} onChange={(e) => getUpdater('navbar')({ ...draft.navbar, position: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500">
+                          <option value="static">Static (Scrolls away)</option>
+                          <option value="sticky">Sticky (Follows scroll)</option>
+                          <option value="fixed">Fixed</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <label className="block text-sm font-medium text-slate-700">Navbar Style
+                        <select value={draft.navbar?.style} onChange={(e) => getUpdater('navbar')({ ...draft.navbar, style: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500">
+                          <option value="solid">Solid Background</option>
+                          <option value="transparent">Transparent (Overlays Hero)</option>
+                        </select>
+                      </label>
+                    </div>
+                    <NavbarLinksBuilder value={draft.navbar?.links || []} onChange={(v) => getUpdater('navbar')({ ...draft.navbar, links: v })} />
+                    <div className="pt-4 border-t border-slate-200">
+                      <h3 className="text-sm font-semibold mb-2">Highlighted Action Button (e.g. Order Now)</h3>
+                      <label className="flex items-center gap-2 font-medium text-sm text-slate-700 mb-3">
+                        <input type="checkbox" checked={!!draft.navbar?.ctaButton?.enabled} onChange={(e) => getUpdater('navbar')({ ...draft.navbar, ctaButton: { ...draft.navbar.ctaButton, enabled: e.target.checked } })} /> Show Action Button in Navbar
+                      </label>
+                      {draft.navbar?.ctaButton?.enabled && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <Field label="Button Text" value={draft.navbar?.ctaButton?.text} onChange={(v) => getUpdater('navbar')({ ...draft.navbar, ctaButton: { ...draft.navbar.ctaButton, text: v } })} />
+                          <Field label="Button Link" value={draft.navbar?.ctaButton?.link} onChange={(v) => getUpdater('navbar')({ ...draft.navbar, ctaButton: { ...draft.navbar.ctaButton, link: v } })} />
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </section>
+
             {/* Core General Detail */}
             <section id="sec-basis" className="scroll-mt-20">
               <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Restaurant Identity</h2>
@@ -835,7 +917,12 @@ function Dashboard({ token, user, restaurant, onUpdate, onLogout }) {
 
             {/* Locations */}
             <section>
-              <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Main Location & Hours</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Main Location & Hours</h2>
+                <label className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-500">
+                  <input type="checkbox" checked={!!draft.showLocationSection} onChange={(e) => getUpdater('showLocationSection')(e.target.checked)} /> Show Section
+                </label>
+              </div>
               <div className="space-y-4">
                 <Field label="Street Address" value={draft.address} onChange={getUpdater('address')} />
                 <div className="grid grid-cols-2 gap-4">
@@ -954,7 +1041,12 @@ function Dashboard({ token, user, restaurant, onUpdate, onLogout }) {
             {/* Image Gallery */}
             <section id="sec-gallery" className="scroll-mt-20">
               <div className="flex items-center justify-between border-t border-slate-100 pt-10 mb-4">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Photo Gallery</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Photo Gallery</h2>
+                  <label className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-500">
+                    <input type="checkbox" checked={!!draft.showGallerySection} onChange={(e) => getUpdater('showGallerySection')(e.target.checked)} /> Show
+                  </label>
+                </div>
                 <select value={draft.galleryFormat} onChange={(e) => getUpdater('galleryFormat')(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs outline-none focus:border-orange-500">
                   <option value="grid">Layout: Brick Grid</option>
                   <option value="carousel">Layout: Horizontal Slider</option>
